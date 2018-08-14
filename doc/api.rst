@@ -1,30 +1,10 @@
 ================
-The PYPIT API
+The PypeIt API
 ================
 
-.. automodule:: pypit
-    :members:
+.. toctree::
+   :maxdepth: 4
+   :caption: Contents:
 
-.. automodule:: ararc
-    :members:
+   pypeit
 
-.. automodule:: ararclines
-    :members:
-
-.. automodule:: arcomb
-    :members:
-
-.. automodule:: arextract
-    :members:
-
-.. automodule:: arflux
-    :members:
-
-.. automodule:: arload
-    :members:
-
-.. automodule:: arlris
-    :members:
-
-.. automodule:: armsgs
-    :members:

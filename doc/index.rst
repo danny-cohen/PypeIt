@@ -1,13 +1,13 @@
-.. PYPIT documentation master file, created by
+.. PypeIt documentation master file, created by
    sphinx-quickstart on Fri Nov 13 13:39:35 2015.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to PYPIT's documentation!
+Welcome to PypeIt's documentation!
 =================================
 
 
-PYPIT is a Python based data reduction pipeline (DRP) written
+PypeIt is a Python based data reduction pipeline (DRP) written
 oringinally for echelle spectroscopy and since expanded
 to low-resolution spectrometers.  This documentation details
 the code, how to run it, and what it produces.
@@ -24,17 +24,18 @@ Getting Started
    :maxdepth: 1
 
    installing
-   overview
+   code_flow
 
-Running PYPIT
-+++++++++++++
+Running PypeIt
+++++++++++++++
 
 .. toctree::
    :maxdepth: 2
 
+   pypeit_par
    cookbook
    setups
-   pypit_file
+   pypeit_file
    calcheck
    running
 
@@ -45,6 +46,7 @@ Data Products
    :maxdepth: 2
 
    outputs
+   qa
 
 Calibrations
 ++++++++++++
@@ -53,6 +55,33 @@ Calibrations
    :maxdepth: 2
 
    calibrations
+   bias
+   slit_tracing
+   wave_calib
+   wavetilts
+   flatfielding
+   fluxing
+
+Instruments
++++++++++++
+
+.. toctree::
+   :maxdepth: 2
+
+   instruments
+   deimos
+   lris
+
+
+Object Algorithms
++++++++++++++++++
+
+.. toctree::
+   :maxdepth: 2
+
+   object_finding
+   object_tracing
+   coadding
 
 Documentation
 +++++++++++++
@@ -60,18 +89,27 @@ Documentation
 .. toctree::
    :maxdepth: 1
 
-   bias
    flexure
    frametype
-   tracing
-   wave_calib
+   inst_settings
+   internals
 
 Other
 +++++
+
+.. toctree::
+   :maxdepth: 1
+
    scripts
+   flow
    api
 
+Contents
+++++++++
+.. toctree::
+   :maxdepth: 4
 
+   pypeit
 
 Indices and tables
 ++++++++++++++++++

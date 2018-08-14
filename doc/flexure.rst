@@ -7,7 +7,7 @@ Flexure Correction
 ******************
 
 This document will describe how a flexure correction
-is performed for each 1D spectrum extracted in PYPIT.
+is performed for each 1D spectrum extracted in PypeIt.
 
 Overview
 ========
@@ -20,54 +20,86 @@ a single, pixel shift.  This is then imposed on the wavelength solution
 with simple linear interpolation.
 
 The general approach is to compare the sky model
-from the observation with an archived sky model.  By
-default, the Paranal sky spectrum is used, as derived
-from the SDSS codes.
+from the observation with an archived sky model. Generally, by default, the
+Paranal sky spectrum is used, as derived from the SDSS codes. The default is 
+different for Kast blue and LRIS blue where sky_kastb_600.fits and sky_LRISb_600.fits
+are respectively used (see :ref:`sky-models` for all sky models).
 
-Presently, we are finding that the sky spectrum at Mauna Kea (measured
-with LRIS) is sufficiently variable and dark
-that a robust solution is challenging.
-Fair results are achieved by using the instrument-specific sky spectra
-in the LowRedux package.  There is a script pyp_compare_sky.py that
-allows the user to plot their extracted sky spectrum against any of
-the ones in the PYPIT archive (in data/sky_spec).  Best practice
-currently is to use the one that best matches as an optional parameter
 
-TIFFANY WILL DESCRIBE THE ALGORITHM FURTHER HERE
+Algorithm
+=========
+
+The basic algorithm may be summarized as follows:
+
+1. Identify the overlapping wavelength range between data and archived sky.
+2. Rebin the archived sky spectrum onto the overlapping wavelength range.
+3. Smooth the sky spectrum to the resolution of the data, if the archive
+has higher spectral resolution (preferred).
+4. Normalize each spectrum to unit average sky counts
+5. Subtract a bspline continuum from each
+6. Perform a cross-correlation
+7. Fit the cross-correlation with a parabola to find center
+8. Apply shift
+
 
 Usage
 =====
 
 By default in ARMLSD, a flexure correction is performed
 on the boxcar extraction of the sky.  This may be disabled
-by the following setting in the .pypit file::
+by the following setting in the .pypeit file::
 
-    reduce flexure spec None
+    reduce flexure spectrum None
 
 
 One can alternatively use the optimal extraction (if it is
 performed) with::
 
-    reduce flexure spec optimal
+    reduce flexure spectrum optimal
+
+By default, the maximum shift allowed in pixels is 20.  If
+you suspect a higher shift is required (e.g. results are poor),
+you may increase the default (e.g. to 50 pixels)::
+
+    reduce flexure maxshift 50
+
+
+.. _sky-models:
 
 Alternate sky models
 ====================
 
+You may find that the default sky models are not the best suited 
+for your data.There is a script that allows the user to plot the 
+extracted sky spectrum for their data against any of the sky models 
+in the PypeIt archive. To use this script::
+
+    pypeit_compare_sky <Name of 1D spectrum> <Name of sky model>
+
 As noted above, the Paranal sky model is the default reference.
-You can select a separate model with by setting archive_spec
-in the .pypit file::
+Presently, we are finding that the sky spectrum at Mauna Kea (measured
+with LRIS) is sufficiently variable and dark
+that a robust solution is challenging.
+Fair results are achieved by using the instrument-specific sky spectra
+in the LowRedux package. The best practice currently is to use the one 
+that best matches as an optional parameter
 
-    reduce flexure archive_spec filename
+You can use a different sky model than the default by placing the 
+following line under the ''Reduce'' block in your .pypeit file::
 
-The additional models supplied with PYPIT are
+    reduce flexure spectrum <Name of sky model>
 
-==================  ===========
-Filename            Description
-==================  ===========
-sky_LRISb_400.fits  Mauna Kea sky observed with LRISb and the 400/3400 grism
-sky_LRISb_600.fits  Mauna Kea sky observed with LRISb and the 600/4000 grism
-sky_kastb_600.fits  Mt. Hamilton sky observed with Kastb and the 600 grism
-==================  ===========
+The models supplied with PypeIt are,
+
+================================   ===========
+Filename                           Description
+================================   ===========
+paranal_sky.fits                   Description to come 
+sky_LRISb_400.fits                 Mauna Kea sky observed with LRISb and the 400/3400 grism
+sky_LRISb_600.fits                 Mauna Kea sky observed with LRISb and the 600/4000 grism [Default for lris_blue]
+sky_kastb_600.fits                 Mt. Hamilton sky observed with Kastb and the 600 grism [Default for kast_blue]
+sky_LRISr_600_7500_5460_7950.fits  Description to come
+=================================  ===========
 
 Other
 =====

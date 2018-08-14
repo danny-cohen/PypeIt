@@ -12,15 +12,32 @@ Basic Algorithms
 ================
 
 These notes will describe the algorithms used to perform
-wavelength calibration with PYPIT.
+wavelength calibration in 1D (i.e. down the slit/order)
+with PypeIt.   The basic steps are:
+
+ 1. Extract 1D arc spectra down the center of each slit/order
+ 2. Load the parameters guiding wavelength calibration
+ 3. Generate the 1D wavelength fits
+
+For the primary step (#3), the preferred approach is a
+new pattern-searching algorithm currently packaged in the PypeIt
+repository named `arclines`.  It is designed to estimate
+the dispersion and wavelength coverage of the spectrum with
+limited inputs and then automatically identify the known
+arc lines.
+
+The code is guided by the WaveCalib class, partially described
+by this `WaveCalib.ipynb <https://github.com/pypeit/pypeit/blob/master/doc/nb/WaveCalib.ipynb>`_
+Notebook.
+
 
 Line Lists
 ==========
 
 Without exception, arc line wavelengths are taken from
 the `NIST database <http://physics.nist.gov/PhysRefData`_,
-in vacuum. These data are stored as ASCII tables in data/arc_lines/NIST.
-Here are the available lamps:
+*in vacuum*. These data are stored as ASCII tables in the
+`arclines` repository. Here are the available lamps:
 
 ======  ==========  =============
 Lamp    Range (A)   Last updated
@@ -29,10 +46,10 @@ ArI     3000-10000  21 April 2016
 CdI     3000-10000  21 April 2016
 CuI     3000-10000  13 June 2016
 HeI     2900-12000  2 May 2016
-HgI     3000-10000  21 April 2016
-KrI     4000-12000  14 April 2016
-NeI     3000-10000  21 April 2016
-XeI     4000-12000  14 April 2016
+HgI     3000-10000  May 2018
+KrI     4000-12000  May 2018
+NeI     3000-10000  May 2018
+XeI     4000-12000  May 2018
 ZnI     2900-8000   2 May 2016
 ======  ==========  =============
 
@@ -40,11 +57,11 @@ By-Hand Calibration
 ===================
 
 If the automatic algorithm is failing (heaven forbid; and you should
-probably raise an Issue on PYPIT if you are sure it isn't your fault),
+probably raise an Issue on PypeIt if you are sure it isn't your fault),
 you can input a set of pixel, wavelength values as a crutch in
-your .pypit setup file.  Here is the recommended approach:
+your .pypeit setup file.  Here is the recommended approach:
 
-#. Run PYPIT with --debug_arc on. This will force the code to stop inside ararc.py
+#. Run PypeIt with --debug_arc on. This will force the code to stop inside ararc.py
 #. Print the pixel values to the screen
 
    *  (Pdb) tcent
@@ -55,19 +72,53 @@ your .pypit setup file.  Here is the recommended approach:
    *  (Pdb) plt.show()
 
 #. Compare that spectrum with a known one and ID a few lines.  Write down.  Better be using vacuum wavelengths
-#. Add pixel values and wavelengths to your .pypit file, e.g.
+#. Add pixel values and wavelengths to your .pypeit file, e.g.
 
    * arc calibrate IDpixels 872.062,902.7719,1931.0048,2452.620,3365.25658,3887.125
    * arc calibrate IDwaves 3248.4769,3274.905,4159.763,4610.656,5402.0634,5854.110
 
-Validation
+
+Flexure Correction
+==================
+
+By default, the code will calculate a flexure shift based on the
+extracted sky spectrum (boxcar). See :doc:`flexure` for
+further details.
+
+Wavelength Frame
+================
+
+PypeIt offers several frames of reference that can used for the
+wavelength scale. The first choice is whether you would like the
+data to be calibrated to air or vacuum wavelengths. This option
+is controlled by the argument::
+
+    reduce calibrate wavelength air
+
+where the default value is to calibrate to vacuum. You can also
+specify 'pixel', which will save the pixel values instead of the
+wavelength values (i.e. a wavelength calibration will not be
+performed).  The calibration follows the Ciddor schema
+(Ciddor 1996, Applied Optics 62, 958).
+
+
+You can also choose if you want the wavelength scale corrected
+to the heliocentric (Sun-centered), barycentric (Solar system
+barycentre), or topocentric (telescope centered). None is also
+an option, but this defaults to topocentric. This option
+is governed by the command::
+
+    reduce calibrate refframe barycentric
+
+where the default value is a heliocentric wavelength scale.
+More details are provided in :doc:`heliocorr`.
+
+
+Developers
 ==========
 
-See the iPython Notebook under test_suite for a comparison of the
-wavelength solution for PYPIT vs. LowRedux.
-
 Adding a new grating to existing instrument
-===========================================
+-------------------------------------------
 
 This section describes how to add a new
 wavelength solution for a new instrument and/or
@@ -102,7 +153,7 @@ section of interest would be::
 
     elif sname=='kast_red':
         lamps = ['HgI','NeI','ArI']
-        #arcparam['llist'] = slf._argflag['run']['pypitdir'] + 'data/arc_lines/kast_red.lst'
+        #arcparam['llist'] = slf._argflag['run']['pypeitdir'] + 'data/arc_lines/kast_red.lst'
 
 And the following lines should be added::
 
@@ -124,15 +175,13 @@ this new disperser. To do this, in method ARMLSD, find::
 
 Note that the last two lines were added so that the QA
 plots can be correctly closed, and the process stopped.
-Run PYPIT, and check in the QA plots that the arc lines
-identified by PYPIT are consistent with a pre-existing
+Run PypeIt, and check in the QA plots that the arc lines
+identified by PypeIt are consistent with a pre-existing
 arc line mapping, and you're done!
 
-Flexure Correction
-==================
 
-By default, the code will calculate a flexure shift based on the
-extracted sky spectrum (boxcar). See :doc:`flexure` for
-further details.
+Validation
+==========
 
-
+See the iPython Notebook under test_suite for a comparison of the
+wavelength solution for PypeIt vs. LowRedux.

@@ -1,24 +1,29 @@
-# PYPIT
-The Python Spectroscopic Data Reduction Pipeline
+# PypeIt
+The Python Spectroscopic Data Reduction Pipeline.  For
+documentation visit:
+
+http://pypeit.readthedocs.io
 
 # Instruments Served
 * Keck/LRIS 
 * Lick/Kast 
 * WHT/ISIS
+* TNG/Dolores
 * Keck/DEIMOS (coming soon)
 * Lick/APF (planned)
 
 # Requirements
+
+(see `./pypeit/requirements.txt`)
+
 * python
 * numpy
 * scipy
+* matplotlib
+* astropy
 * ginga
 * h5py
-* cython
-* astropy
 * future
-* matplotlib
-* GNU Scientific Library
 * PyYAML
 * linetools
 

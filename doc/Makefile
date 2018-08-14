@@ -2,10 +2,14 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    =
+SPHINXAPI     = sphinx-apidoc
+SPHINXAPIOPT  = members,private-members,undoc-members,show-inheritance
+SPHINXOPTS    = -aE -w ./sphinx_warnings.out
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = _build
+LOCALFILES    = $(BUILDDIR)/* api module.rst pypeit.rst pypeit.*.rst sphinx_warnings.out pypeit_par.rst
+
 
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
@@ -49,9 +53,12 @@ help:
 	@echo "  coverage   to run coverage check of the documentation (if enabled)"
 
 clean:
-	rm -rf $(BUILDDIR)/*
+	rm -rf $(LOCALFILES)
 
 html:
+	export SPHINX_APIDOC_OPTIONS=$(SPHINXAPIOPT)
+	$(SPHINXAPI) -o . ../pypeit --separate
+	python3 ./scripts/build_par_rst.py
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
@@ -87,9 +94,9 @@ qthelp:
 	@echo
 	@echo "Build finished; now you can run "qcollectiongenerator" with the" \
 	      ".qhcp project file in $(BUILDDIR)/qthelp, like this:"
-	@echo "# qcollectiongenerator $(BUILDDIR)/qthelp/PYPIT.qhcp"
+	@echo "# qcollectiongenerator $(BUILDDIR)/qthelp/PypeIt.qhcp"
 	@echo "To view the help file:"
-	@echo "# assistant -collectionFile $(BUILDDIR)/qthelp/PYPIT.qhc"
+	@echo "# assistant -collectionFile $(BUILDDIR)/qthelp/PypeIt.qhc"
 
 applehelp:
 	$(SPHINXBUILD) -b applehelp $(ALLSPHINXOPTS) $(BUILDDIR)/applehelp
@@ -104,8 +111,8 @@ devhelp:
 	@echo
 	@echo "Build finished."
 	@echo "To view the help file:"
-	@echo "# mkdir -p $$HOME/.local/share/devhelp/PYPIT"
-	@echo "# ln -s $(BUILDDIR)/devhelp $$HOME/.local/share/devhelp/PYPIT"
+	@echo "# mkdir -p $$HOME/.local/share/devhelp/PypeIt"
+	@echo "# ln -s $(BUILDDIR)/devhelp $$HOME/.local/share/devhelp/PypeIt"
 	@echo "# devhelp"
 
 epub:
