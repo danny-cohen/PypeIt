@@ -623,6 +623,7 @@ def local_skysub_extract(sciimg, sciivar, tilts, waveimg, global_sky, rn2_img, t
 
     return (skyimage[thismask], objimage[thismask], modelivar[thismask], outmask[thismask])
 
+
 def order_pixels(pixlocn, lord, rord):
     """
     Based on physical pixel locations, determine which pixels are within the orders
@@ -806,3 +807,38 @@ def plt_bspline_sky(tilts, scifrcp, bgf_flat, inslit, gdp):
     plt.show()
 
 
+def scattered_light(slf, frame, det):
+    """ Remove scattered light from frame
+
+    Parameters
+    ----------
+    slf : class
+      Science Exposure class
+    frame : ndarray
+      2D array containing scattered light that needs to be removed
+    det : int
+      Detector index
+
+    Returns
+    -------
+    slframe : ndarray
+      The input frame with scattered light removed
+    """
+
+    # Determine which pixels contain data, and which pixels are between slits
+    ordpix = order_pixels(slf._pixlocn[det-1], slf._lordloc[det-1], slf._rordloc[det-1], 2)
+    ordpix[np.where(ordpix>0)] = 1
+
+    # Create an array to use with the fitting
+    xfit = np.arange(frame.shape[1])
+
+    # Create an output frame
+    slframe = np.zeros_like(frame)
+
+    for ii in range(frame.shape[0]):
+        imsk = ordpix[ii, :]
+        msk, coeff = utils.robust_polyfit(xfit, frame[ii, :], 3, sigma=2.0,
+                                            function='bspline', everyn=20,
+                                            initialmask=imsk, forceimask=True)
+        slframe[ii, :] = utils.func_val(coeff, xfit, 'bspline')
+    return slframe
