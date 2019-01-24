@@ -208,6 +208,7 @@ def generate_sensfunc(wave, counts, counts_ivar, airmass, exptime, spectrograph,
             std_dict['wave'] = vega_data['col1'] * units.AA
             std_dict['flux'] = 1e17 * vega_data['col2'] / 10**(0.4*star_mag) * \
                                units.erg / units.s / units.cm ** 2 / units.AA
+
         ## using Kurucz stellar model
         else:
             # Create star spectral model
