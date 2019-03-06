@@ -108,9 +108,9 @@ def load_specobjs(fname,order=None):
         # Parse name
         idx = hdu.name
         objp = idx.split('-')
-        try: #objp[-2][:5] == 'ORDER':
+        if objp[-2][:5] == 'ORDER':
             iord = int(objp[-2][5:])
-        except KeyError:
+        else:
             msgs.warn('Loading longslit data ?')
             iord = int(-1)
         if (order is not None) and (iord !=order):
