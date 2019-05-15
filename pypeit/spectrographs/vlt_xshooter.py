@@ -375,7 +375,9 @@ class VLTXShooterNIRSpectrograph(VLTXShooterSpectrograph):
 
         self.empty_bpm(shape=shape, filename=filename, det=det)
         if det == 1:
-            bpm_dir = resource_filename('pypeit', 'data/static_calibs/vlt_xshoooter/')
+            bpm_dir = resource_filename('pypeit', 'data/static_calibs/vlt_xshooter/')
+            from IPython import embed
+            embed()
             try :
                 bpm_loc = np.loadtxt(bpm_dir+'BP_MAP_RP_NIR.dat',usecols=(0,1))
             except IOError :
