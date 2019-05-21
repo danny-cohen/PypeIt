@@ -1394,7 +1394,7 @@ def ech_coadd(files,objids=None,extract='OPT',flux=True,giantcoadd=False,ordersc
     nfile = len(files)
     if nfile <=1:
         msgs.info('Only one spectrum exits coadding...')
-        return
+        # return
 
     fname = files[0]
     ext_final = fits.getheader(fname, -1)
