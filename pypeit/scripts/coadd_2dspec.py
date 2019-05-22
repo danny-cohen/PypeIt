@@ -127,7 +127,7 @@ def main(args):
         par = pypeitpar.PypeItPar.from_cfg_lines(cfg_lines=spectrograph_def_par.to_config(),
                                                  merge_with=config_lines)
     elif args.obj is not None:
-        spec2d_files = glob.glob('./Science/spec2d_' + args.obj + '*')
+        spec2d_files = glob.glob('./Science/spec2d_*' + args.obj + '*')
         head0 = fits.getheader(spec2d_files[0])
         spectrograph_name = head0['SPECTROG']
         spectrograph = load_spectrograph(spectrograph_name)
