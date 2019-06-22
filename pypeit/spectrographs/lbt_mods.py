@@ -51,7 +51,7 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
         par['calibrations']['pinholeframe']['exprng'] = [999999, None]  # No pinhole frames
         par['calibrations']['pixelflatframe']['exprng'] = [0, None]
         par['calibrations']['traceframe']['exprng'] = [0, None]
-        par['calibrations']['arcframe']['exprng'] = [None, 60]
+        par['calibrations']['arcframe']['exprng'] = [None, None]
         par['calibrations']['standardframe']['exprng'] = [1, 200]
         par['scienceframe']['exprng'] = [200, None]
         return par
@@ -105,7 +105,7 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
         """
         good_exp = framematch.check_frame_exptime(fitstbl['exptime'], exprng)
         if ftype in ['science', 'standard']:
-            return good_exp & (fitstbl['idname'] == 'OBJECT') & (fitstbl['ra'] != 'none') & (fitstbl['decker'] != 'SieveMask')
+            return good_exp & (fitstbl['idname'] == 'OBJECT') & (fitstbl['ra'] != 'none') & (fitstbl['dispname'] != 'Flat')
         if ftype == 'bias':
             return good_exp  & (fitstbl['idname'] == 'BIAS')
         if ftype in ['pixelflat', 'trace']:
@@ -115,7 +115,8 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
             # Don't type pinhole or dark frames
             return np.zeros(len(fitstbl), dtype=bool)
         if ftype in ['arc', 'tilt']:
-            return good_exp & ((fitstbl['idname'] == 'COMP') | (fitstbl['idname'] == 'OBJECT')) & (fitstbl['decker'] != 'SieveMask')
+            return good_exp & ((fitstbl['idname'] == 'COMP') | (fitstbl['idname'] == 'OBJECT')) \
+                   & (fitstbl['dispname'] != 'Flat') & (fitstbl['decker'] != 'LS60x5')
 
         msgs.warn('Cannot determine if frames are of type {0}.'.format(ftype))
         return np.zeros(len(fitstbl), dtype=bool)
@@ -183,6 +184,9 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
         #par['calibrations']['wavelengths']['method'] = 'reidentify'
         #par['calibrations']['wavelengths']['reid_arxiv'] = 'shane_kast_blue_600_4310_d55.json'
 
+        par['calibrations']['biasframe']['useframe'] = 'bias'
+
+
         return par
 
     def configuration_keys(self):
@@ -193,8 +197,8 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
             cfg_keys: list
 
         """
-        # decker is not included because arcs are often taken with a 0.5" slit
-        return ['dispname', 'decker', 'dichroic', 'binning' ]
+        # decker is not included because standards are usually taken with a 5" slit
+        return ['dispname', 'binning' ]
 
 
 #    def check_headers(self, headers):
@@ -272,7 +276,22 @@ class LBTMODS1BSpectrograph(LBTMODSSpectrograph):
         #par['calibrations']['wavelengths']['method'] = 'reidentify'
         #par['calibrations']['wavelengths']['reid_arxiv'] = 'shane_kast_blue_600_4310_d55.json'
 
+        par['calibrations']['biasframe']['useframe'] = 'bias'
+
+
         return par
+
+    def configuration_keys(self):
+        """
+        Set the configuration keys
+
+        Returns:
+            cfg_keys: list
+
+        """
+        # decker is not included because standards are usually taken with a 5" slit
+        return ['dispname', 'binning' ]
+
 
 #    def check_headers(self, headers):
 #        """
@@ -354,7 +373,22 @@ class LBTMODS2RSpectrograph(LBTMODSSpectrograph):
         #par['calibrations']['wavelengths']['method'] = 'reidentify'
         #par['calibrations']['wavelengths']['reid_arxiv'] = 'shane_kast_blue_600_4310_d55.json'
 
+        par['calibrations']['biasframe']['useframe'] = 'bias'
+
+
         return par
+
+    def configuration_keys(self):
+        """
+        Set the configuration keys
+
+        Returns:
+            cfg_keys: list
+
+        """
+        # decker is not included because standards are usually taken with a 5" slit
+        return ['dispname', 'binning' ]
+
 
 #    def check_headers(self, headers):
 #        """
@@ -431,7 +465,22 @@ class LBTMODS2BSpectrograph(LBTMODSSpectrograph):
         #par['calibrations']['wavelengths']['method'] = 'reidentify'
         #par['calibrations']['wavelengths']['reid_arxiv'] = 'shane_kast_blue_600_4310_d55.json'
 
+        par['calibrations']['biasframe']['useframe'] = 'bias'
+
+
         return par
+
+    def configuration_keys(self):
+        """
+        Set the configuration keys
+
+        Returns:
+            cfg_keys: list
+
+        """
+        # decker is not included because standards are usually taken with a 5" slit
+        return ['dispname', 'binning' ]
+
 
 #    def check_headers(self, headers):
 #        """
