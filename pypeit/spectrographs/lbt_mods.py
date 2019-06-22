@@ -8,6 +8,7 @@ from pypeit import telescopes
 from pypeit.core import framematch
 from pypeit.par import pypeitpar
 from pypeit.spectrographs import spectrograph
+from pypeit.core import parse
 
 from pypeit import debugger
 
@@ -75,6 +76,9 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
         self.meta['exptime'] = dict(ext=0, card='EXPTIME')
         self.meta['airmass'] = dict(ext=0, card='AIRMASS')
         self.meta['dispname'] = dict(ext=0, card='GRATNAME')
+        self.meta['dichroic'] = dict(ext=0, card='FILTNAME')
+        self.meta['idname'] = dict(ext=0, card='IMAGETYP')
+
 
     def compound_meta(self, headarr, meta_key):
         """
@@ -88,7 +92,7 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
 
         """
         if meta_key == 'binning':
-            binspatial, binspec = parse.parse_binning(headarr[0]['CCDXBIN'])
+            binspatial, binspec = parse.parse_binning(np.array([headarr[0]['CCDXBIN'], headarr[0]['CCDYBIN']]))
             binning = parse.binning2string(binspatial, binspec)
             return binning
         msgs.error("Not ready for this compound meta")
@@ -101,17 +105,17 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
         """
         good_exp = framematch.check_frame_exptime(fitstbl['exptime'], exprng)
         if ftype in ['science', 'standard']:
-            return good_exp & (fitstbl['idname'] == 'OBJECT')
+            return good_exp & (fitstbl['idname'] == 'OBJECT') & (fitstbl['ra'] != 'none') & (fitstbl['decker'] != 'SieveMask')
         if ftype == 'bias':
             return good_exp  & (fitstbl['idname'] == 'BIAS')
         if ftype in ['pixelflat', 'trace']:
             # Flats and trace frames are typed together
-            return good_exp  & (fitstbl['idname'] == 'FLAT')
+            return good_exp  & (fitstbl['idname'] == 'FLAT') & (fitstbl['decker'] != 'Imaging')
         if ftype in ['pinhole', 'dark']:
             # Don't type pinhole or dark frames
             return np.zeros(len(fitstbl), dtype=bool)
         if ftype in ['arc', 'tilt']:
-            return good_exp & ((fitstbl['idname'] == 'COMP') | (fitstbl['idname'] == 'OBJECT'))
+            return good_exp & ((fitstbl['idname'] == 'COMP') | (fitstbl['idname'] == 'OBJECT')) & (fitstbl['decker'] != 'SieveMask')
 
         msgs.warn('Cannot determine if frames are of type {0}.'.format(ftype))
         return np.zeros(len(fitstbl), dtype=bool)
@@ -180,6 +184,18 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
         #par['calibrations']['wavelengths']['reid_arxiv'] = 'shane_kast_blue_600_4310_d55.json'
 
         return par
+
+    def configuration_keys(self):
+        """
+        Set the configuration keys
+
+        Returns:
+            cfg_keys: list
+
+        """
+        # decker is not included because arcs are often taken with a 0.5" slit
+        return ['dispname', 'decker', 'dichroic', 'binning' ]
+
 
 #    def check_headers(self, headers):
 #        """
