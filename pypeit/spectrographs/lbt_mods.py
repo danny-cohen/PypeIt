@@ -10,9 +10,8 @@ from pypeit.par import pypeitpar
 from pypeit.spectrographs import spectrograph
 from pypeit.core import parse
 
-from pypeit import debugger
-
 # ToDo: test MODS1B and MODS2B
+# ToDo: write a reader to read different quadrants. currently assuming one giant detector with one amplifier
 
 class LBTMODSSpectrograph(spectrograph.Spectrograph):
     """
@@ -21,7 +20,7 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
     def __init__(self):
         # Get it started
         super(LBTMODSSpectrograph, self).__init__()
-        self.spectrograph = 'lbt_mods'
+        self.spectrograph = 'lbt_mods_base'
         self.telescope = telescopes.LBTTelescopePar()
         self.timeunit = 'isot'
 
@@ -37,7 +36,6 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
         par['calibrations']['pixelflatframe']['number'] = 5
         par['calibrations']['traceframe']['number'] = 5
         par['calibrations']['arcframe']['number'] = 1
-
 
         # Scienceimage default parameters
         par['scienceimage'] = pypeitpar.ScienceImagePar()
@@ -97,7 +95,16 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
             return binning
         msgs.error("Not ready for this compound meta")
 
-    # Uses parent metadata keys
+    def configuration_keys(self):
+        """
+        Set the configuration keys
+
+        Returns:
+            cfg_keys: list
+
+        """
+        # decker is not included because standards are usually taken with a 5" slit and arc using 0.8" slit
+        return ['dispname', 'binning' ]
 
     def check_frame_type(self, ftype, fitstbl, exprng=None):
         """
@@ -105,7 +112,8 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
         """
         good_exp = framematch.check_frame_exptime(fitstbl['exptime'], exprng)
         if ftype in ['science', 'standard']:
-            return good_exp & (fitstbl['idname'] == 'OBJECT') & (fitstbl['ra'] != 'none') & (fitstbl['dispname'] != 'Flat')
+            return good_exp & (fitstbl['idname'] == 'OBJECT') & (fitstbl['ra'] != 'none') \
+                   & (fitstbl['dispname'] != 'Flat')
         if ftype == 'bias':
             return good_exp  & (fitstbl['idname'] == 'BIAS')
         if ftype in ['pixelflat', 'trace']:
@@ -147,8 +155,8 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
                             numamplifiers   = 1,
                             gain            = 2.5,
                             ronoise         = 4.2,
-                            datasec='[1:8288,1:3088]',
-                            oscansec='[:,3000:]',
+                            datasec='[:, 49:8240]',
+                            oscansec='[:, 8240:]',
                             suffix          = '_mods1r'
                             )]
         self.numhead = 1
@@ -184,21 +192,11 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
         #par['calibrations']['wavelengths']['method'] = 'reidentify'
         #par['calibrations']['wavelengths']['reid_arxiv'] = 'shane_kast_blue_600_4310_d55.json'
 
-        par['calibrations']['biasframe']['useframe'] = 'bias'
+        #par['calibrations']['biasframe']['useframe'] = 'bias'
 
 
         return par
 
-    def configuration_keys(self):
-        """
-        Set the configuration keys
-
-        Returns:
-            cfg_keys: list
-
-        """
-        # decker is not included because standards are usually taken with a 5" slit
-        return ['dispname', 'binning' ]
 
 
 #    def check_headers(self, headers):
@@ -242,8 +240,8 @@ class LBTMODS1BSpectrograph(LBTMODSSpectrograph):
                             numamplifiers   = 1,
                             gain            = 2.1,
                             ronoise         = 3.0,
-                            datasec='[1:8288,1:3088]',
-                            oscansec='[:,3000:]',
+                            datasec='[:, 49:8240]',
+                            oscansec='[:, 8240:]',
                             suffix          = '_mods1b'
                             )]
         self.numhead = 1
@@ -280,17 +278,6 @@ class LBTMODS1BSpectrograph(LBTMODSSpectrograph):
 
 
         return par
-
-    def configuration_keys(self):
-        """
-        Set the configuration keys
-
-        Returns:
-            cfg_keys: list
-
-        """
-        # decker is not included because standards are usually taken with a 5" slit
-        return ['dispname', 'binning' ]
 
 
 #    def check_headers(self, headers):
@@ -335,8 +322,8 @@ class LBTMODS2RSpectrograph(LBTMODSSpectrograph):
                             numamplifiers   = 1,
                             gain            = 1.7,
                             ronoise         = 2.8,
-                            datasec='[1:8288,1:3088]',
-                            oscansec='[8250:,:]',
+                            datasec='[:, 49:8240]',
+                            oscansec='[:, 8240:]',
                             suffix          = '_mods2r'
                             )]
         self.numhead = 1
@@ -377,17 +364,6 @@ class LBTMODS2RSpectrograph(LBTMODSSpectrograph):
 
 
         return par
-
-    def configuration_keys(self):
-        """
-        Set the configuration keys
-
-        Returns:
-            cfg_keys: list
-
-        """
-        # decker is not included because standards are usually taken with a 5" slit
-        return ['dispname', 'binning' ]
 
 
 #    def check_headers(self, headers):
@@ -431,8 +407,8 @@ class LBTMODS2BSpectrograph(LBTMODSSpectrograph):
                             numamplifiers   = 1,
                             gain            = 2.0,
                             ronoise         = 3.7,
-                            datasec='[1:8288,1:3088]',
-                            oscansec='[8250:,:]',
+                            datasec='[:, 49:8240]',
+                            oscansec='[:, 8240:]',
                             suffix          = '_mods2b'
                             )]
         self.numhead = 1
@@ -469,17 +445,6 @@ class LBTMODS2BSpectrograph(LBTMODSSpectrograph):
 
 
         return par
-
-    def configuration_keys(self):
-        """
-        Set the configuration keys
-
-        Returns:
-            cfg_keys: list
-
-        """
-        # decker is not included because standards are usually taken with a 5" slit
-        return ['dispname', 'binning' ]
 
 
 #    def check_headers(self, headers):
