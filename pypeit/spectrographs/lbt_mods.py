@@ -1,7 +1,7 @@
 """ Module for LBT/MODS specific codes
 """
 import numpy as np
-
+from astropy.io import fits
 
 from pypeit import msgs
 from pypeit import telescopes
@@ -174,10 +174,12 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
         par['calibrations']['wavelengths']['rms_threshold'] = 1.0
         par['calibrations']['wavelengths']['fwhm'] = 10.
         #par['calibrations']['wavelengths']['lamps'] = ['XeI','ArII','ArI','NeI','KrI']]
-        par['calibrations']['wavelengths']['lamps'] = ['OH_MODS']
+        par['calibrations']['wavelengths']['lamps'] = ['ArI','NeI','KrI','XeI']
+        #par['calibrations']['wavelengths']['lamps'] = ['OH_MODS']
         par['calibrations']['wavelengths']['nonlinear_counts'] = self.detector[0]['nonlinear'] * self.detector[0]['saturation']
-        par['calibrations']['wavelengths']['n_first'] = 1
-        par['calibrations']['wavelengths']['n_final'] = 4
+        par['calibrations']['wavelengths']['n_first'] = 3
+        #par['calibrations']['wavelengths']['n_final'] = 4
+        par['calibrations']['wavelengths']['match_toler'] = 2.5
 
         # slit
         par['calibrations']['slits']['sigdetect'] = 300
@@ -197,6 +199,40 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
 
         return par
 
+
+    def bpm(self, shape=None, filename=None, det=None, **null_kwargs):
+        """ Generate a BPM
+
+        Parameters
+        ----------
+        det : int, REQUIRED
+        **null_kwargs:
+           Captured and never used
+
+        Returns
+        -------
+        badpix : ndarray
+
+        """
+        # Get the empty bpm: force is always True
+        self.empty_bpm(shape=shape, filename=filename, det=det)
+        from IPython import embed
+        embed()
+        msgs.info("Using hard-coded BPM for  MODS1R")
+
+        # TODO: Fix this
+        # Get the binning
+        hdu = fits.open(filename)
+        header = hdu[0].header
+        xbin, ybin = header['CCDXBIN'], header['CCDYBIN']
+        hdu.close()
+
+        # Apply the mask
+
+        badc = 616//xbin
+        self.bpm_img[badc,:] = 1
+
+        return self.bpm_img
 
 
 #    def check_headers(self, headers):
@@ -341,11 +377,12 @@ class LBTMODS2RSpectrograph(LBTMODSSpectrograph):
         par['calibrations']['wavelengths']['rms_threshold'] = 1.0
         par['calibrations']['wavelengths']['fwhm'] = 10.
         #par['calibrations']['wavelengths']['lamps'] = ['XeI','ArII','ArI','NeI','KrI']]
-        par['calibrations']['wavelengths']['lamps'] = ['OH_MODS']
+        par['calibrations']['wavelengths']['lamps'] = ['ArI','NeI','KrI','XeI']
+        #par['calibrations']['wavelengths']['lamps'] = ['OH_MODS']
         par['calibrations']['wavelengths']['nonlinear_counts'] = self.detector[0]['nonlinear'] * self.detector[0]['saturation']
-        par['calibrations']['wavelengths']['n_first'] = 1
-        par['calibrations']['wavelengths']['n_final'] = 4
-
+        par['calibrations']['wavelengths']['n_first'] = 3
+        #par['calibrations']['wavelengths']['n_final'] = 4
+        par['calibrations']['wavelengths']['match_toler'] = 2.5
 
         # slit
         par['calibrations']['slits']['sigdetect'] = 300

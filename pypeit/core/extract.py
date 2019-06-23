@@ -1498,8 +1498,8 @@ def objfind(image, thismask, slit_left, slit_righ, inmask=None, fwhm=3.0,
     left_asym = np.outer(slit_left,np.ones(int(nsamp))) + np.outer(xsize/nsamp, np.arange(nsamp))
     righ_asym = left_asym + np.outer(xsize/nsamp, np.ones(int(nsamp)))
     # This extract_asymbox2 call smashes the image in the spectral direction along the curved object traces
-    flux_spec = extract_asymbox2(thisimg[6000:7000, :], left_asym[6000:7000, :], righ_asym[6000:7000, :])
-    mask_spec = extract_asymbox2(totmask[6000:7000, :], left_asym[6000:7000, :], righ_asym[6000:7000, :]) < 0.3
+    flux_spec = extract_asymbox2(thisimg[5700:6300, :], left_asym[5700:6300, :], righ_asym[5700:6300, :])
+    mask_spec = extract_asymbox2(totmask[5700:6300, :], left_asym[5700:6300, :], righ_asym[5700:6300, :]) < 0.3
 #    flux_spec = extract_asymbox2(thisimg, left_asym, righ_asym)
 #    mask_spec = extract_asymbox2(totmask, left_asym, righ_asym) < 0.3
     flux_mean, flux_median, flux_sig = sigma_clipped_stats(flux_spec,mask = mask_spec, axis=0, sigma = 4.0)
