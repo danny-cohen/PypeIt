@@ -216,8 +216,7 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
         """
         # Get the empty bpm: force is always True
         self.empty_bpm(shape=shape, filename=filename, det=det)
-        from IPython import embed
-        embed()
+
         msgs.info("Using hard-coded BPM for  MODS1R")
 
         # TODO: Fix this
@@ -228,9 +227,15 @@ class LBTMODS1RSpectrograph(LBTMODSSpectrograph):
         hdu.close()
 
         # Apply the mask
+        self.bpm_img[6278//xbin:6288//xbin, 1545//ybin:1634//ybin] = 1
+        self.bpm_img[4202//xbin:4203//xbin, 1475//ybin:1544//ybin] = 1
+        self.bpm_img[3551//xbin:3557//xbin, 2392//ybin:2903//ybin] = 1
+        self.bpm_img[3553//xbin:3557//xbin, 1455//ybin:1544//ybin] = 1
 
-        badc = 616//xbin
-        self.bpm_img[badc,:] = 1
+        self.bpm_img[5650//xbin, 1281//ybin:1544//ybin] = 1
+        self.bpm_img[4780//xbin, 1407//ybin:1536//ybin] = 1
+        self.bpm_img[3554//xbin, 1545//ybin:2392//ybin] = 1
+        self.bpm_img[163//xbin, 1545//ybin:1963//ybin] = 1
 
         return self.bpm_img
 
@@ -314,6 +319,43 @@ class LBTMODS1BSpectrograph(LBTMODSSpectrograph):
 
 
         return par
+
+    def bpm(self, shape=None, filename=None, det=None, **null_kwargs):
+        """ Generate a BPM
+
+        Parameters
+        ----------
+        det : int, REQUIRED
+        **null_kwargs:
+           Captured and never used
+
+        Returns
+        -------
+        badpix : ndarray
+
+        """
+        # ToDo: check whether MODS1B has the same flip direction with MODS1R
+        #       and modify the BPM accordingly
+        # Get the empty bpm: force is always True
+        self.empty_bpm(shape=shape, filename=filename, det=det)
+
+        msgs.info("Using hard-coded BPM for  MODS1B")
+
+        # Get the binning
+        hdu = fits.open(filename)
+        header = hdu[0].header
+        xbin, ybin = header['CCDXBIN'], header['CCDYBIN']
+        hdu.close()
+
+        # Apply the mask
+        self.bpm_img[6390//xbin:6391//xbin, 1263//ybin:1545//ybin] = 1
+
+        self.bpm_img[3064//xbin, 1438//ybin:1937//ybin] = 1
+        self.bpm_img[6490//xbin, 1162//ybin:1545//ybin] = 1
+        self.bpm_img[7306//xbin, 784//ybin:1531//ybin] = 1
+
+        return self.bpm_img
+
 
 
 #    def check_headers(self, headers):
@@ -402,6 +444,46 @@ class LBTMODS2RSpectrograph(LBTMODSSpectrograph):
 
         return par
 
+    def bpm(self, shape=None, filename=None, det=None, **null_kwargs):
+        """ Generate a BPM
+
+        Parameters
+        ----------
+        det : int, REQUIRED
+        **null_kwargs:
+           Captured and never used
+
+        Returns
+        -------
+        badpix : ndarray
+
+        """
+        # Get the empty bpm: force is always True
+        self.empty_bpm(shape=shape, filename=filename, det=det)
+
+        msgs.info("Using hard-coded BPM for  MODS2R")
+
+        # Get the binning
+        hdu = fits.open(filename)
+        header = hdu[0].header
+        xbin, ybin = header['CCDXBIN'], header['CCDYBIN']
+        hdu.close()
+
+        # Apply the mask
+        self.bpm_img[6148//xbin:6149//xbin, 1334//ybin:1544//ybin] = 1
+        self.bpm_img[6207//xbin:6208//xbin, 1397//ybin:1544//ybin] = 1
+
+        self.bpm_img[6101//xbin, 1343//ybin:1544//ybin] = 1
+        self.bpm_img[6159//xbin, 1400//ybin:1544//ybin] = 1
+        self.bpm_img[6189//xbin, 1317//ybin:1544//ybin] = 1
+        self.bpm_img[7552//xbin, 1545//ybin:2771//ybin] = 1
+        self.bpm_img[7504//xbin, 1545//ybin:2774//ybin] = 1
+        self.bpm_img[4203//xbin, 1//ybin:1544//ybin] = 1
+        self.bpm_img[4155//xbin, 1//ybin:1544//ybin] = 1
+
+        return self.bpm_img
+
+
 
 #    def check_headers(self, headers):
 #        """
@@ -482,6 +564,54 @@ class LBTMODS2BSpectrograph(LBTMODSSpectrograph):
 
 
         return par
+
+    def bpm(self, shape=None, filename=None, det=None, **null_kwargs):
+        """ Generate a BPM
+
+        Parameters
+        ----------
+        det : int, REQUIRED
+        **null_kwargs:
+           Captured and never used
+
+        Returns
+        -------
+        badpix : ndarray
+
+        """
+        # ToDo: check whether MODS2B has the same flip direction with MODS1R
+        #       and modify the BPM accordingly
+
+        # Get the empty bpm: force is always True
+        self.empty_bpm(shape=shape, filename=filename, det=det)
+
+        msgs.info("Using hard-coded BPM for  MODS2B")
+
+        # Get the binning
+        hdu = fits.open(filename)
+        header = hdu[0].header
+        xbin, ybin = header['CCDXBIN'], header['CCDYBIN']
+        hdu.close()
+
+        # Apply the mask
+        self.bpm_img[5176//xbin:5178//xbin, 550//ybin:1544//ybin] = 1
+        self.bpm_img[5176//xbin:5178//xbin, 1545//ybin:1628//ybin] = 1
+        self.bpm_img[4408//xbin:4409//xbin, 1545//ybin:2661//ybin] = 1
+        self.bpm_img[4408//xbin:4410//xbin, 2661//ybin:2663//ybin] = 1
+        self.bpm_img[2495//xbin:2498//xbin, 1327//ybin:1544//ybin] = 1
+        self.bpm_img[2391//xbin:2393//xbin, 1049//ybin:1051//ybin] = 1
+        self.bpm_img[1974//xbin:1979//xbin, 807//ybin:1544//ybin] = 1
+        self.bpm_img[1975//xbin:1979//xbin, 1545//ybin:1607//ybin] = 1
+        self.bpm_img[1972//xbin:1973//xbin, 1588//ybin:1589//ybin] = 1
+        self.bpm_img[274//xbin:277//xbin, 1342//ybin:1544//ybin] = 1
+        self.bpm_img[275//xbin:277//xbin, 1252//ybin:1341//ybin] = 1
+        self.bpm_img[276//xbin:277//xbin, 1243//ybin:1251//ybin] = 1
+        self.bpm_img[274//xbin:276//xbin, 1545//ybin:3066//ybin] = 1
+
+        self.bpm_img[2392//xbin, 1052//ybin:1544//ybin] = 1
+        self.bpm_img[275//xbin, 1221//ybin:1242//ybin] = 1
+
+        return self.bpm_img
 
 
 #    def check_headers(self, headers):
