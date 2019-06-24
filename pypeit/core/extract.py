@@ -1498,10 +1498,11 @@ def objfind(image, thismask, slit_left, slit_righ, inmask=None, fwhm=3.0,
     left_asym = np.outer(slit_left,np.ones(int(nsamp))) + np.outer(xsize/nsamp, np.arange(nsamp))
     righ_asym = left_asym + np.outer(xsize/nsamp, np.ones(int(nsamp)))
     # This extract_asymbox2 call smashes the image in the spectral direction along the curved object traces
-    flux_spec = extract_asymbox2(thisimg[5700:6300, :], left_asym[5700:6300, :], righ_asym[5700:6300, :])
-    mask_spec = extract_asymbox2(totmask[5700:6300, :], left_asym[5700:6300, :], righ_asym[5700:6300, :]) < 0.3
 #    flux_spec = extract_asymbox2(thisimg, left_asym, righ_asym)
 #    mask_spec = extract_asymbox2(totmask, left_asym, righ_asym) < 0.3
+    # For LBT I choose the region between 8900A and 9700A for the z>6.5 quasars
+    flux_spec = extract_asymbox2(thisimg[5700:6600, :], left_asym[5700:6600, :], righ_asym[5700:6600, :])
+    mask_spec = extract_asymbox2(totmask[5700:6600, :], left_asym[5700:6600, :], righ_asym[5700:6600, :]) < 0.3
     flux_mean, flux_median, flux_sig = sigma_clipped_stats(flux_spec,mask = mask_spec, axis=0, sigma = 4.0)
     smash_mask = np.isfinite(flux_mean)
     flux_mean_med = np.median(flux_mean[smash_mask])

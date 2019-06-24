@@ -123,8 +123,7 @@ class LBTMODSSpectrograph(spectrograph.Spectrograph):
             # Don't type pinhole or dark frames
             return np.zeros(len(fitstbl), dtype=bool)
         if ftype in ['arc', 'tilt']:
-            return good_exp & ((fitstbl['idname'] == 'COMP') | (fitstbl['idname'] == 'OBJECT')) \
-                   & (fitstbl['dispname'] != 'Flat') & (fitstbl['decker'] != 'LS60x5')
+            return good_exp & (fitstbl['idname'] == 'COMP') & (fitstbl['dispname'] != 'Flat')
 
         msgs.warn('Cannot determine if frames are of type {0}.'.format(ftype))
         return np.zeros(len(fitstbl), dtype=bool)
