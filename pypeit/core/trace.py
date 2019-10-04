@@ -978,9 +978,11 @@ def fit_trace(flux, trace_cen, order, ivar=None, bpm=None, trace_bpm=None, weigh
         # Do not do any kind of masking based on the trace recentering
         # errors. Trace fitting is much more robust when masked pixels
         # are simply replaced by the input trace values. Therefore,
-        # masked pixels are not excluded from the fit, but we do give
-        # them lower weight via that inverse variance. See the
-        # instantation of trace_fit_ivar above.
+        # masked pixels are not excluded from the fit. We thus fit with a uniform
+        # weighting, with the exception of the _trace_bpm pixels which are always
+        # replaced with the input trace, but are given a lower weight via the inverse variance.
+        # trace_fit_ivar above. In this way they still get a way in the fit, but do not
+        # overly influence the fit.
         ################################################################
 
         # Fit the data
