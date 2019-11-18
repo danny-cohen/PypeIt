@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 Welcome to PypeIt's documentation!
-=================================
+==================================
 
 
 PypeIt is a Python based data reduction pipeline (DRP) written
@@ -20,6 +20,7 @@ Getting Started
 
    installing
    code_flow
+   codeconduct
 
 Running PypeIt
 ++++++++++++++
@@ -69,6 +70,7 @@ Instruments
    instruments
    deimos
    lris
+   mage
 
 
 Object Algorithms
@@ -92,28 +94,17 @@ Documentation
    inst_settings
    internals
 
-Other
-+++++
+For Developers
+++++++++++++++
 
 .. toctree::
    :maxdepth: 1
 
    scripts
    flow
+   new_spectrograph
+   images
    PypeIt API <api/pypeit>
 
-Contents
-++++++++
-.. toctree::
-   :maxdepth: 4
-
-   pypeit
-
-Indices and tables
-++++++++++++++++++
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
 .. _kast webpage: http://mthamilton.ucolick.org/techdocs/instruments/kast/
+

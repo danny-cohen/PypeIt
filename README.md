@@ -12,14 +12,20 @@ and/or join our PypeIt Users Slack
 (the invite is recorded in this Issue:
 https://github.com/pypeit/PypeIt/issues/676)
 
-
 # Instruments Served
-* Keck/LRIS 
+* Gemini/GNIRS
+* Gemini/GMOS (soon)
 * Lick/Kast 
-* WHT/ISIS
-* TNG/Dolores
-* Keck/DEIMOS (coming soon)
 * Lick/APF (planned)
+* Magellan/MagE
+* Keck/DEIMOS
+* Keck/LRIS 
+* Keck/MOSFIRE (soon)
+* Keck/NIRES
+* Keck/NIRSPEC (low-dispersion)
+* VLT/X-Shooter
+* VLT/FORS2
+* WHT/ISIS
 
 # Requirements
 
@@ -35,6 +41,9 @@ https://github.com/pypeit/PypeIt/issues/676)
 * future
 * PyYAML
 * linetools
+
+# Code of Conduct
+(see `./doc/codeconduct.rst`)
 
 # License
 This program is free software: you can redistribute it and/or modify
