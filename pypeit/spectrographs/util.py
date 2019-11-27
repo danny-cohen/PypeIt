@@ -4,6 +4,7 @@ import numpy as np
 
 from pypeit import msgs
 from pypeit import spectrographs
+from IPython import embed
 
 # TODO: Allow the spectrographs to be identified by their camera?  Won't
 # work for 'shane_kast_red' and 'shane_kast_red_ret'.
@@ -22,10 +23,9 @@ def valid_spectrographs():
     return ['keck_deimos', 'keck_lris_blue', 'keck_lris_red', 'keck_lris_red_longonly', 'keck_nires', 'keck_nirspec_low',
             'shane_kast_blue', 'shane_kast_red', 'shane_kast_red_ret', 'tng_dolores',
             'wht_isis_blue', 'vlt_xshooter_uvb', 'vlt_xshooter_vis', 'vlt_xshooter_nir',
-            'gemini_gnirs', 'gemini_gmos_south_ham', 'gemini_gmos_north_e2v',
-            'gemini_gmos_north_ham', 'magellan_fire', 'magellan_mage', 'keck_hires_red',
-            'lbt_mods1r', 'lbt_mods1b', 'lbt_mods2r', 'lbt_mods2b',
-            'vlt_fors2', 'lbt_luci1', 'lbt_luci2']
+            'gemini_gnirs', 'gemini_flamingos1', 'gemini_flamingos2', 'gemini_gmos_south_ham', 'gemini_gmos_north_e2v',
+            'gemini_gmos_north_ham', 'magellan_fire', 'magellan_fire_long', 'magellan_mage', 'keck_hires_red',
+            'lbt_mods1r', 'lbt_mods1b', 'lbt_mods2r', 'lbt_mods2b', 'vlt_fors2',  'lbt_luci1', 'lbt_luci2']
             # There are no such spectrographs defined
             #'keck_hires_blue', 'mmt_binospec']
 
@@ -58,6 +58,12 @@ def load_spectrograph(spectrograph):
     if spectrograph == 'gemini_gnirs':
         return spectrographs.gemini_gnirs.GeminiGNIRSSpectrograph()
 
+    if spectrograph == 'gemini_flamingos1':
+        return spectrographs.gemini_flamingos.GeminiFLAMINGOS1Spectrograph()
+
+    if spectrograph == 'gemini_flamingos2':
+        return spectrographs.gemini_flamingos.GeminiFLAMINGOS2Spectrograph()
+
     if spectrograph == 'keck_deimos':
         return spectrographs.keck_deimos.KeckDEIMOSSpectrograph()
 
@@ -82,8 +88,14 @@ def load_spectrograph(spectrograph):
     if spectrograph == 'keck_nirspec_low':
         return spectrographs.keck_nirspec.KeckNIRSPECLowSpectrograph()
 
+    if spectrograph == 'keck_mosfire':
+        return spectrographs.keck_mosfire.KeckMOSFIRESpectrograph()
+
     if spectrograph == 'magellan_fire':
-        return spectrographs.magellan_fire.MagellanFIRESpectrograph()
+        return spectrographs.magellan_fire.MagellanFIREEchelleSpectrograph()
+
+    if spectrograph == 'magellan_fire_long':
+        return spectrographs.magellan_fire.MagellanFIRELONGSpectrograph()
 
     if spectrograph == 'magellan_mage':
         return spectrographs.magellan_mage.MagellanMAGESpectrograph()
@@ -114,7 +126,6 @@ def load_spectrograph(spectrograph):
 
     if spectrograph == 'vlt_fors2':
         return spectrographs.vlt_fors.VLTFORS2Spectrograph()
-
 
     if spectrograph == 'gemini_gmos_south_ham':
         return spectrographs.gemini_gmos.GeminiGMOSSHamSpectrograph()
