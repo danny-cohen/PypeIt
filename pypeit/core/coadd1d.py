@@ -70,11 +70,16 @@ def get_wave_grid(waves, masks=None, wave_method='linear', iref=0, wave_grid_min
     Returns:
         wave_grid, wave_grid_mid, dsamp
 
-             wave_grid (ndarray):  New wavelength grid, not masked
-             wave_grid_mid (ndarray): New wavelength grid evaluated at the centers of the wavelength bins, that is this
-                                      grid is simply offset from wave_grid by dsamp/2.0, in either linear space or log10
-                                      depending on whether linear or (log10 or velocity) was requested.  For iref or concatenate
-                                      the linear wavelength sampling will be calculated.
+             wave_grid (np.ndarray):
+                  New wavelength grid, not masked
+             wave_grid_mid (np.ndarray):
+                  New wavelength grid evaluated at the centers of the wavelength bins, that is this
+                  grid is simply offset from wave_grid by dsamp/2.0, in either linear space or log10
+                  depending on whether linear or (log10 or velocity) was requested.  For iref or concatenate
+                  the linear wavelength sampling will be calculated.
+            dsamp (float):
+                  The pixel sampling for wavelength grid created.
+
 
     """
 
@@ -651,7 +656,7 @@ def sn_weights(waves, fluxes, ivars, masks, sn_smooth_npix, const_weights=False,
     waves: flota ndarray, shape = (nspec,) or (nspec, nexp)
         Reference wavelength grid for all the spectra. If wave is a 1d array the routine will assume
         that all spectra are on the same wavelength grid. If wave is a 2-d array, it will use the individual
-    sn_smooth_npix: float, optional, default = 10000.0
+    sn_smooth_npix: float
          Number of pixels used for determining smoothly varying S/N ratio weights.
 
     Returns
@@ -717,6 +722,10 @@ def sn_weights(waves, fluxes, ivars, masks, sn_smooth_npix, const_weights=False,
                 weights[:, iexp] = np.full(nspec, np.fmax(sn2[iexp], 1e-2)) # set the minimum  to be 1e-2 to avoid zeros
             else:
                 weight_method = 'wavelength dependent'
+                # JFH THis line is experimental but it deals with cases where the spectrum drops to zero. We thus
+                # transition to using ivar_weights. This needs more work because the spectra are not rescaled at this point.
+                #sn_val[sn_val[:, iexp] < 1.0, iexp] = ivar_stack[sn_val[:, iexp] < 1.0, iexp]
+
                 sn_med1 = utils.fast_running_median(sn_val[mask_stack[:, iexp],iexp]**2, sn_smooth_npix)
                 sn_med2 = scipy.interpolate.interp1d(spec_vec[mask_stack[:, iexp]], sn_med1, kind = 'cubic',
                                                      bounds_error = False, fill_value = 0.0)(spec_vec)
@@ -842,8 +851,8 @@ def get_tell_from_file(sensfile, waves, masks, iord=None):
     return telluric
 
 
-def robust_median_ratio(flux, ivar, flux_ref, ivar_ref, mask=None, mask_ref=None, ref_percentile=20.0, min_good=0.05,
-                        maxiters=5, sigrej=3.0, max_factor=10.0):
+def robust_median_ratio(flux, ivar, flux_ref, ivar_ref, mask=None, mask_ref=None, ref_percentile=70.0, min_good=0.05,
+                        maxiters=5, sigrej=3.0, max_factor=10.0, snr_do_not_rescale=1.0):
     '''
     Robustly determine the ratio between input spectrum flux and reference spectrum flux_ref. The code will perform
     best if the reference spectrum is chosen to be the higher S/N ratio spectrum, i.e. a preliminary stack that you want
@@ -864,9 +873,10 @@ def robust_median_ratio(flux, ivar, flux_ref, ivar_ref, mask=None, mask_ref=None
             inverse variance of reference spectrum.
         mask_ref: ndarray, bool, (nspec,)
             mask for reference spectrum. True=Good. If not input, computed from inverse variance.
-        ref_percentile: float, default=20.0
-            Percentile fraction used for selecting the minimum SNR cut. Pixels above this cut are deemed the "good"
-            pixels and are used to compute the ratio. This must be a number between 0 and 100.
+        ref_percentile: float, default=70.0
+            Percentile fraction used for selecting the minimum SNR cut from the reference spectrum. Pixels above this
+            percentile cut are deemed the "good" pixels and are used to compute the ratio. This must be a number
+            between 0 and 100.
         min_good: float, default = 0.05
             Minimum fraction of good pixels determined as a fraction of the total pixels for estimating the median ratio
         maxiters: int, defrault = 5,
@@ -875,6 +885,11 @@ def robust_median_ratio(flux, ivar, flux_ref, ivar_ref, mask=None, mask_ref=None
             Rejection threshold for astropy.stats.SigmaClip
         max_factor: float, default = 10.0,
             Maximum allowed value of the returned ratio
+        snr_do_not_rescale (float):, default = 1.0
+            If the S/N ratio of the set of pixels (defined by upper ref_percentile in the reference spectrum) in the
+            input spectrum have a median value below snr_do_not_rescale, median rescaling will not be attempted
+            and the code returns ratio = 1.0. We also use this parameter to define the set of pixels (determined from
+            the reference spectrum) to compare for the rescaling.
     Returns:
         ratio: float, the number that must be multiplied into flux in order to get it to match up with flux_ref
     '''
@@ -887,10 +902,13 @@ def robust_median_ratio(flux, ivar, flux_ref, ivar_ref, mask=None, mask_ref=None
 
     nspec = flux.size
     snr_ref = flux_ref * np.sqrt(ivar_ref)
-    snr_ref_best = np.fmax(np.percentile(snr_ref[mask_ref], ref_percentile),0.5)
+    snr_ref_best = np.fmax(np.percentile(snr_ref[mask_ref], ref_percentile),snr_do_not_rescale)
     calc_mask = (snr_ref > snr_ref_best) & mask_ref & mask
 
-    if (np.sum(calc_mask) > min_good*nspec):
+    snr_resc = flux*np.sqrt(ivar)
+    snr_resc_med = np.median(snr_resc[calc_mask])
+
+    if (np.sum(calc_mask) > min_good*nspec) & (snr_resc_med > snr_do_not_rescale):
         # Take the best part of the higher SNR reference spectrum
         sigclip = stats.SigmaClip(sigma=sigrej, maxiters=maxiters, cenfunc='median', stdfunc=utils.nan_mad_std)
 
@@ -914,8 +932,12 @@ def robust_median_ratio(flux, ivar, flux_ref, ivar_ref, mask=None, mask_ref=None
             msgs.info('Used {:} good pixels for computing median flux ratio'.format(np.sum(new_mask)))
             ratio = np.fmax(np.fmin(flux_ref_median/flux_dat_median, max_factor), 1.0/max_factor)
     else:
-        msgs.warn('Found only {:} good pixels for computing median flux ratio.'.format(np.sum(calc_mask))
-                  + msgs.newline() + 'No median rescaling applied')
+        if (np.sum(calc_mask) <= min_good*nspec):
+            msgs.warn('Found only {:} good pixels for computing median flux ratio.'.format(np.sum(calc_mask))
+            + msgs.newline() + 'No median rescaling applied')
+        if (snr_resc_med <= snr_do_not_rescale):
+            msgs.warn('Median flux ratio of pixels in reference spectrum {:} <= snr_do_not_rescale = {:}.'.format(snr_resc_med, snr_do_not_rescale)
+                      + msgs.newline() + 'No median rescaling applied')
         ratio = 1.0
 
     return ratio
@@ -1032,7 +1054,7 @@ def order_median_scale(waves, fluxes, ivars, masks, min_good=0.05, maxiters=5, m
 
 
 def scale_spec(wave, flux, ivar, sn, wave_ref, flux_ref, ivar_ref, mask=None, mask_ref=None, scale_method=None, min_good=0.05,
-               ref_percentile=20.0, maxiters=5, sigrej=3, max_median_factor=10.0,
+               ref_percentile=70.0, maxiters=5, sigrej=3, max_median_factor=10.0,
                npoly=None, hand_scale=None, sn_max_medscale=2.0, sn_min_medscale=0.5, debug=False, show=False):
     '''
     Routine for solving for the best way to rescale an input spectrum flux to match a reference spectrum flux_ref.
@@ -1067,7 +1089,7 @@ def scale_spec(wave, flux, ivar, sn, wave_ref, flux_ref, ivar_ref, mask=None, ma
        maximum scale factor for median rescaling for robust_median_ratio if median rescaling is the method used.
     sigrej: float, default=3.0
        rejection threshold used for rejecting outliers by robsut_median_ratio
-    ref_percentile: float, default=20.0
+    ref_percentile: float, default=70.0
        percentile fraction cut used for selecting minimum SNR cut for robust_median_ratio
     npoly: int, default=None
        order for the poly ratio scaling if polynomial rescaling is the method used. Default is to automatically compute
@@ -1210,7 +1232,8 @@ def compute_stack(wave_grid, waves, fluxes, ivars, masks, weights):
              one bin versus another depending on the sampling.
     '''
 
-    ubermask = masks & (weights > 0.0) & (waves > 1.0) & (ivars > 0.0)
+    #mask bad values and extreme values (usually caused by extreme low sensitivity at the edge of detectors)
+    ubermask = masks & (weights > 0.0) & (waves > 1.0) & (ivars > 0.0) & (utils.inverse(ivars)<1e10)
     waves_flat = waves[ubermask].flatten()
     fluxes_flat = fluxes[ubermask].flatten()
     ivars_flat = ivars[ubermask].flatten()
@@ -1769,7 +1792,7 @@ def spec_reject_comb(wave_grid, waves, fluxes, ivars, masks, weights, sn_clip=30
     return wave_stack, flux_stack, ivar_stack, mask_stack, outmask, nused
 
 
-def scale_spec_stack(wave_grid, waves, fluxes, ivars, masks, sn, weights, ref_percentile=30.0, maxiter_scale=5, sigrej_scale=3,
+def scale_spec_stack(wave_grid, waves, fluxes, ivars, masks, sn, weights, ref_percentile=70.0, maxiter_scale=5, sigrej_scale=3,
                      scale_method=None, hand_scale=None, sn_max_medscale=2.0, sn_min_medscale=0.5, debug=False, show=False):
 
     '''
@@ -1826,7 +1849,7 @@ def scale_spec_stack(wave_grid, waves, fluxes, ivars, masks, sn, weights, ref_pe
         maxiter_reject: int, default=5
             maximum number of iterations for stacking and rejection. The code stops iterating either when
             the output mask does not change betweeen successive iterations or when maxiter_reject is reached.
-        ref_percentile: float, default=20.0
+        ref_percentile: float, default=70.0
             percentile fraction cut used for selecting minimum SNR cut for robust_median_ratio
         maxiter_scale: int, default=5
             Maximum number of iterations performed for rescaling spectra.
@@ -1885,6 +1908,8 @@ def scale_spec_stack(wave_grid, waves, fluxes, ivars, masks, sn, weights, ref_pe
     # Rescale spectra to line up with our preliminary stack so that we can sensibly reject outliers
     nexp = np.shape(fluxes)[1]
     fluxes_scale = np.zeros_like(fluxes)
+
+
     ivars_scale = np.zeros_like(ivars)
     scales = np.zeros_like(fluxes)
     scale_method_used = []
@@ -1903,7 +1928,7 @@ def scale_spec_stack(wave_grid, waves, fluxes, ivars, masks, sn, weights, ref_pe
 #Todo: This should probaby take a parset?
 def combspec(waves, fluxes, ivars, masks, sn_smooth_npix,
              wave_method='linear', dwave=None, dv=None, dloglam=None, samp_fact=1.0, wave_grid_min=None, wave_grid_max=None,
-             ref_percentile=20.0, maxiter_scale=5,
+             ref_percentile=70.0, maxiter_scale=5,
              sigrej_scale=3, scale_method=None, hand_scale=None, sn_max_medscale=2.0, sn_min_medscale=0.5,
              const_weights=False, maxiter_reject=5, sn_clip=30.0, lower=3.0, upper=3.0,
              maxrej=None, qafile=None, title='', debug=False, debug_scale=False, show_scale=False, show=False):
@@ -2022,10 +2047,10 @@ def combspec(waves, fluxes, ivars, masks, sn_smooth_npix,
 
     return wave_stack, flux_stack, ivar_stack, mask_stack
 
-#Todo: Make this work for multiple objects after the coadd script input file format is fixed.
+#TODO: Make this read in a generalized file format, either specobjs or output of a previous coaddd.
 def multi_combspec(fnames, objids, sn_smooth_npix=None, ex_value='OPT', flux_value=True,
                    wave_method='linear', dwave=None, dv=None, dloglam=None, samp_fact=1.0, wave_grid_min=None,
-                   wave_grid_max=None, ref_percentile=20.0, maxiter_scale=5,
+                   wave_grid_max=None, ref_percentile=70.0, maxiter_scale=5,
                    sigrej_scale=3, scale_method=None, hand_scale=None, sn_max_medscale=2.0, sn_min_medscale=0.5,
                    const_weights=False, maxiter_reject=5, sn_clip=30.0, lower=3.0, upper=3.0,
                    maxrej=None, nmaskedge=2, phot_scale_dicts=None,
@@ -2061,7 +2086,7 @@ def multi_combspec(fnames, objids, sn_smooth_npix=None, ex_value='OPT', flux_val
 
 def ech_combspec(fnames, objids, sensfile=None, nbest=None, ex_value='OPT', flux_value=True, wave_method='log10',
                  dwave=None, dv=None, dloglam=None, samp_fact=1.0, wave_grid_min=None, wave_grid_max=None,
-                 ref_percentile=20.0, maxiter_scale=5,
+                 ref_percentile=70.0, maxiter_scale=5,
                  niter_order_scale=3, sigrej_scale=3, scale_method=None, hand_scale=None, sn_max_medscale=2.0, sn_min_medscale=0.5,
                  sn_smooth_npix=None, const_weights=False, maxiter_reject=5, sn_clip=30.0, lower=3.0, upper=3.0,
                  maxrej=None, max_factor=10.0, maxiters=5, min_good=0.05, phot_scale_dicts=None, nmaskedge=2,
@@ -2098,8 +2123,8 @@ def ech_combspec(fnames, objids, sensfile=None, nbest=None, ex_value='OPT', flux
            In case you want to specify the minimum wavelength in your wavelength grid, default=None computes from data.
         wave_grid_max: float, default=None
            In case you want to specify the maximum wavelength in your wavelength grid, default=None computes from data.
-        ref_percentile:
-            percentile fraction cut used for selecting minimum SNR cut for robust_median_ratio
+        ref_percentile (float): default = 70.0
+            percentile fraction cut used for selecting minimum SNR cut for robust_median_ratio.
         maxiter_scale: int, default=5
             Maximum number of iterations performed for rescaling spectra.
         max_median_factor: float, default=10.0
