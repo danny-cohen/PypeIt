@@ -763,13 +763,17 @@ class DataContainer:
             # Allow new attributes to be added before object is
             # initialized
             dict.__setattr__(self, item, value)
-        else:
+        elif item in self.datamodel.keys():  # Part of the data model
             # Otherwise, set as an item
             try:
                 self.__setitem__(item, value)
             except KeyError as e:
                 # Raise attribute error instead of key error
                 raise AttributeError(e)
+        elif item in self.__dict__:  # Internal attribute
+            dict.__setattr__(self, item, value)
+        else:
+            raise AttributeError(e)
 
     def __setitem__(self, item, value):
         """
@@ -782,6 +786,13 @@ class DataContainer:
         if not isinstance(value, self.datamodel[item]['otype']):
             raise TypeError('Incorrect data type for {0}!'.format(item) + 
                             'Allowed type(s) are: {0}'.format(self.datamodel[item]['otype']))
+        # Array
+        if 'atype' in self.datamodel[item].keys():
+            if not isinstance(value.flat[0], self.datamodel[item]['atype']):
+                print("Wrong data type for array: {}".format(item))
+                print("Allowed type(s) for the array are: {}".format(self.datamodel[item]['atype']))
+                raise IOError("Try again")
+        # Set
         self.__dict__[item] = value
 
     def __getitem__(self, item):

@@ -1,10 +1,10 @@
 """ Module for the SpecObjs and SpecObj classes
 """
 import copy
+import inspect
 from IPython import embed
 
 import numpy as np
-
 from scipy import interpolate
 
 from astropy import units
@@ -17,90 +17,18 @@ from pypeit.core import parse
 from pypeit.core import flux_calib
 from pypeit import utils
 
+from pypeit import datamodel
+
 naming_model = {}
 for skey in ['SPAT', 'SLIT', 'DET', 'SCI','OBJ', 'ORDER']:
     naming_model[skey.lower()] = skey
 
-# Data model -- Put here to be able to reach it without instantiating the class
-#  These are outward facing items, i.e. items that the user will receive and use.
-#  These are upper case to distinguish them from internal attributes
-data_model = {
-    'TRACE_SPAT': dict(otype=np.ndarray, atype=float, desc='Object trace along the spec (spatial pixel)'),
-    'FWHM': dict(otype=float, desc='Spatial FWHM of the object (pixels)'),
-    'FWHMFIT': dict(otype=np.ndarray, desc='Spatial FWHM across the detector (pixels)'),
-    'OPT_WAVE': dict(otype=np.ndarray, atype=float, desc='Optimal Wavelengths (Angstroms)'),
-    'OPT_FLAM': dict(otype=np.ndarray, atype=float, desc='Optimal flux (erg/s/cm^2/Ang)'),
-    'OPT_FLAM_SIG': dict(otype=np.ndarray, atype=float, desc='Optimal flux uncertainty (erg/s/cm^2/Ang)'),
-    'OPT_FLAM_IVAR': dict(otype=np.ndarray, atype=float, desc='Optimal flux inverse variance (erg/s/cm^2/Ang)^-2'),
-    'OPT_COUNTS': dict(otype=np.ndarray, atype=float, desc='Optimal flux (counts)'),
-    'OPT_COUNTS_IVAR': dict(otype=np.ndarray, atype=float,
-                            desc='Inverse variance of optimally extracted flux using modelivar image (counts^2)'),
-    'OPT_COUNTS_SIG': dict(otype=np.ndarray, atype=float,
-                             desc='Optimally extracted noise from IVAR (counts)'),
-    'OPT_COUNTS_NIVAR': dict(otype=np.ndarray, atype=float,
-                             desc='Optimally extracted noise variance, sky+read noise only (counts^2)'),
-    'OPT_MASK': dict(otype=np.ndarray, atype=bool, desc='Mask for optimally extracted flux'),
-    'OPT_COUNTS_SKY': dict(otype=np.ndarray, atype=float, desc='Optimally extracted sky (counts)'),
-    'OPT_COUNTS_RN': dict(otype=np.ndarray, atype=float, desc='Optimally extracted RN squared (counts)'),
-    'OPT_FRAC_USE': dict(otype=np.ndarray, atype=float,
-                         desc='Fraction of pixels in the object profile subimage used for this extraction'),
-    'OPT_CHI2': dict(otype=np.ndarray, atype=float,
-                     desc='Reduced chi2 of the model fit for this spectral pixel'),
-    'OPT_WAVE_GRID': dict(otype=np.ndarray, atype=float, desc='Optimal wavelengths in COADD2D grid'),
-    'OPT_WAVE_GRID_MASK': dict(otype=np.ndarray, atype=bool, desc='Mask for optimal wavelengths in COADD2D grid'),
-    'OPT_WAVE_GRID_MIN': dict(otype=np.ndarray, atype=float, desc='Minimum optimal wavelengths in COADD2D grid'),
-    'OPT_WAVE_GRID_MAX': dict(otype=np.ndarray, atype=float, desc='Maximum optimal wavelengths in COADD2D grid'),
-    #
-    'BOX_WAVE': dict(otype=np.ndarray, atype=float, desc='Boxcar Wavelengths (Angstroms)'),
-    'BOX_FLAM': dict(otype=np.ndarray, atype=float, desc='Boxcar flux (erg/s/cm^2/Ang)'),
-    'BOX_FLAM_SIG': dict(otype=np.ndarray, atype=float, desc='Boxcar flux uncertainty (erg/s/cm^2/Ang)'),
-    'BOX_FLAM_IVAR': dict(otype=np.ndarray, atype=float, desc='Boxcar flux inverse variance (erg/s/cm^2/Ang)^-2'),
-    'BOX_COUNTS': dict(otype=np.ndarray, atype=float, desc='Boxcar flux (counts)'),
-    'BOX_COUNTS_IVAR': dict(otype=np.ndarray, atype=float,
-                            desc='Inverse variance of optimally extracted flux using modelivar image (counts^2)'),
-    'BOX_COUNTS_SIG': dict(otype=np.ndarray, atype=float,
-                           desc='Boxcar extracted noise from IVAR (counts)'),
-    'BOX_COUNTS_NIVAR': dict(otype=np.ndarray, atype=float,
-                             desc='Boxcar extracted noise variance, sky+read noise only (counts^2)'),
-    'BOX_MASK': dict(otype=np.ndarray, atype=bool, desc='Mask for optimally extracted flux'),
-    'BOX_COUNTS_SKY': dict(otype=np.ndarray, atype=float, desc='Boxcar extracted sky (counts)'),
-    'BOX_COUNTS_RN': dict(otype=np.ndarray, atype=float, desc='Boxcar extracted RN squared (counts)'),
-    'BOX_FRAC_USE': dict(otype=np.ndarray, atype=float,
-                         desc='Fraction of pixels in the object profile subimage used for this extraction'),
-    'BOX_CHI2': dict(otype=np.ndarray, atype=float,
-                     desc='Reduced chi2 of the model fit for this spectral pixel'),
-    'BOX_WAVE_GRID': dict(otype=np.ndarray, atype=float, desc='Boxcar wavelengths in COADD2D grid'),
-    'BOX_WAVE_GRID_MASK': dict(otype=np.ndarray, atype=bool, desc='Mask for boxcar wavelengths in COADD2D grid'),
-    'BOX_WAVE_GRID_MIN': dict(otype=np.ndarray, atype=float, desc='Minimum boxcar wavelengths in COADD2D grid'),
-    'BOX_WAVE_GRID_MAX': dict(otype=np.ndarray, atype=float, desc='Maximum boxcar wavelengths in COADD2D grid'),
-    #
-    'BOX_RADIUS': dict(otype=float, desc='Size of boxcar radius (pixels)'),
-    #
-    'FLEX_SHIFT': dict(otype=float, desc='Shift of the spectrum to correct for flexure (pixels)'),
-    'VEL_TYPE': dict(otype=str, desc='Type of heliocentric correction (if any)'),
-    'VEL_CORR': dict(otype=float, desc='Relativistic velocity correction for wavelengths'),
-    #
-    'DET': dict(otype=(int,np.integer), desc='Detector number'),
-    'PYPELINE': dict(otype=str, desc='Name of the PypeIt pipeline mode'),
-    'OBJTYPE': dict(otype=str, desc='PypeIt type of object (standard, science)'),
-    'SPAT_PIXPOS': dict(otype=(float,np.float32), desc='Spatial location of the trace on detector (pixel)'),
-    'SPAT_FRACPOS': dict(otype=(float,np.float32), desc='Fractional location of the object on the slit'),
-    #
-    'SLITID': dict(otype=(int,np.integer), desc='Slit ID. Increasing from left to right on detector. Zero based.'),
-    'OBJID': dict(otype=(int, np.integer), desc='Object ID for multislit data. Each object is given an index for the slit '
-                                                  'it appears increasing from from left to right. These are one based.'),
-    #
-    'ECH_OBJID': dict(otype=(int, np.integer),
-                      desc='Object ID for echelle data. Each object is given an index in the order '
-                           'it appears increasing from from left to right. These are one based.'),
-    'ECH_ORDERINDX': dict(otype=(int, np.integer), desc='Order indx, analogous to SLITID for echelle. Zero based.'),
-    'ECH_FRACPOS': dict(otype=(float,np.float32), desc='Synced echelle fractional location of the object on the slit'),
-    'ECH_ORDER': dict(otype=(int, np.integer), desc='Physical echelle order'),
 
-}
+from importlib import reload
+reload(datamodel)
 
 
-class SpecObj(object):
+class SpecObj(datamodel.DataContainer):
     """Class to handle object spectra from a single exposure
     One generates one of these Objects for each spectrum in the exposure. They are instantiated by the object
     finding routine, and then all spectral extraction information for the object are assigned as attributes
@@ -139,6 +67,86 @@ class SpecObj(object):
         'FRAC_USE' : frac_use  # Fraction of pixels in the object profile subimage used for this extraction
         'CHI2' : chi2  # Reduced chi2 of the model fit for this spectral pixel
     """
+    # Data model -- Put here to be able to reach it without instantiating the class
+    #  These are outward facing items, i.e. items that the user will receive and use.
+    #  These are upper case to distinguish them from internal attributes
+    datamodel = {
+        'TRACE_SPAT': dict(otype=np.ndarray, atype=float, desc='Object trace along the spec (spatial pixel)'),
+        'FWHM': dict(otype=float, desc='Spatial FWHM of the object (pixels)'),
+        'FWHMFIT': dict(otype=np.ndarray, desc='Spatial FWHM across the detector (pixels)'),
+        'OPT_WAVE': dict(otype=np.ndarray, atype=float, desc='Optimal Wavelengths (Angstroms)'),
+        'OPT_FLAM': dict(otype=np.ndarray, atype=float, desc='Optimal flux (erg/s/cm^2/Ang)'),
+        'OPT_FLAM_SIG': dict(otype=np.ndarray, atype=float, desc='Optimal flux uncertainty (erg/s/cm^2/Ang)'),
+        'OPT_FLAM_IVAR': dict(otype=np.ndarray, atype=float, desc='Optimal flux inverse variance (erg/s/cm^2/Ang)^-2'),
+        'OPT_COUNTS': dict(otype=np.ndarray, atype=float, desc='Optimal flux (counts)'),
+        'OPT_COUNTS_IVAR': dict(otype=np.ndarray, atype=float,
+                                desc='Inverse variance of optimally extracted flux using modelivar image (counts^2)'),
+        'OPT_COUNTS_SIG': dict(otype=np.ndarray, atype=float,
+                               desc='Optimally extracted noise from IVAR (counts)'),
+        'OPT_COUNTS_NIVAR': dict(otype=np.ndarray, atype=float,
+                                 desc='Optimally extracted noise variance, sky+read noise only (counts^2)'),
+        'OPT_MASK': dict(otype=np.ndarray, atype=bool, desc='Mask for optimally extracted flux'),
+        'OPT_COUNTS_SKY': dict(otype=np.ndarray, atype=float, desc='Optimally extracted sky (counts)'),
+        'OPT_COUNTS_RN': dict(otype=np.ndarray, atype=float, desc='Optimally extracted RN squared (counts)'),
+        'OPT_FRAC_USE': dict(otype=np.ndarray, atype=float,
+                             desc='Fraction of pixels in the object profile subimage used for this extraction'),
+        'OPT_CHI2': dict(otype=np.ndarray, atype=float,
+                         desc='Reduced chi2 of the model fit for this spectral pixel'),
+        'OPT_WAVE_GRID': dict(otype=np.ndarray, atype=float, desc='Optimal wavelengths in COADD2D grid'),
+        'OPT_WAVE_GRID_MASK': dict(otype=np.ndarray, atype=bool, desc='Mask for optimal wavelengths in COADD2D grid'),
+        'OPT_WAVE_GRID_MIN': dict(otype=np.ndarray, atype=float, desc='Minimum optimal wavelengths in COADD2D grid'),
+        'OPT_WAVE_GRID_MAX': dict(otype=np.ndarray, atype=float, desc='Maximum optimal wavelengths in COADD2D grid'),
+        #
+        'BOX_WAVE': dict(otype=np.ndarray, atype=float, desc='Boxcar Wavelengths (Angstroms)'),
+        'BOX_FLAM': dict(otype=np.ndarray, atype=float, desc='Boxcar flux (erg/s/cm^2/Ang)'),
+        'BOX_FLAM_SIG': dict(otype=np.ndarray, atype=float, desc='Boxcar flux uncertainty (erg/s/cm^2/Ang)'),
+        'BOX_FLAM_IVAR': dict(otype=np.ndarray, atype=float, desc='Boxcar flux inverse variance (erg/s/cm^2/Ang)^-2'),
+        'BOX_COUNTS': dict(otype=np.ndarray, atype=float, desc='Boxcar flux (counts)'),
+        'BOX_COUNTS_IVAR': dict(otype=np.ndarray, atype=float,
+                                desc='Inverse variance of optimally extracted flux using modelivar image (counts^2)'),
+        'BOX_COUNTS_SIG': dict(otype=np.ndarray, atype=float,
+                               desc='Boxcar extracted noise from IVAR (counts)'),
+        'BOX_COUNTS_NIVAR': dict(otype=np.ndarray, atype=float,
+                                 desc='Boxcar extracted noise variance, sky+read noise only (counts^2)'),
+        'BOX_MASK': dict(otype=np.ndarray, atype=bool, desc='Mask for optimally extracted flux'),
+        'BOX_COUNTS_SKY': dict(otype=np.ndarray, atype=float, desc='Boxcar extracted sky (counts)'),
+        'BOX_COUNTS_RN': dict(otype=np.ndarray, atype=float, desc='Boxcar extracted RN squared (counts)'),
+        'BOX_FRAC_USE': dict(otype=np.ndarray, atype=float,
+                             desc='Fraction of pixels in the object profile subimage used for this extraction'),
+        'BOX_CHI2': dict(otype=np.ndarray, atype=float,
+                         desc='Reduced chi2 of the model fit for this spectral pixel'),
+        'BOX_WAVE_GRID': dict(otype=np.ndarray, atype=float, desc='Boxcar wavelengths in COADD2D grid'),
+        'BOX_WAVE_GRID_MASK': dict(otype=np.ndarray, atype=bool, desc='Mask for boxcar wavelengths in COADD2D grid'),
+        'BOX_WAVE_GRID_MIN': dict(otype=np.ndarray, atype=float, desc='Minimum boxcar wavelengths in COADD2D grid'),
+        'BOX_WAVE_GRID_MAX': dict(otype=np.ndarray, atype=float, desc='Maximum boxcar wavelengths in COADD2D grid'),
+        #
+        'BOX_RADIUS': dict(otype=float, desc='Size of boxcar radius (pixels)'),
+        #
+        'FLEX_SHIFT': dict(otype=float, desc='Shift of the spectrum to correct for flexure (pixels)'),
+        'VEL_TYPE': dict(otype=str, desc='Type of heliocentric correction (if any)'),
+        'VEL_CORR': dict(otype=float, desc='Relativistic velocity correction for wavelengths'),
+        #
+        'DET': dict(otype=(int, np.integer), desc='Detector number'),
+        'PYPELINE': dict(otype=str, desc='Name of the PypeIt pipeline mode'),
+        'OBJTYPE': dict(otype=str, desc='PypeIt type of object (standard, science)'),
+        'SPAT_PIXPOS': dict(otype=(float, np.float32), desc='Spatial location of the trace on detector (pixel)'),
+        'SPAT_FRACPOS': dict(otype=(float, np.float32), desc='Fractional location of the object on the slit'),
+        #
+        'SLITID': dict(otype=(int, np.integer), desc='Slit ID. Increasing from left to right on detector. Zero based.'),
+        'OBJID': dict(otype=(int, np.integer),
+                      desc='Object ID for multislit data. Each object is given an index for the slit '
+                           'it appears increasing from from left to right. These are one based.'),
+        #
+        'ECH_OBJID': dict(otype=(int, np.integer),
+                          desc='Object ID for echelle data. Each object is given an index in the order '
+                               'it appears increasing from from left to right. These are one based.'),
+        'ECH_ORDERINDX': dict(otype=(int, np.integer), desc='Order indx, analogous to SLITID for echelle. Zero based.'),
+        'ECH_FRACPOS': dict(otype=(float, np.float32),
+                            desc='Synced echelle fractional location of the object on the slit'),
+        'ECH_ORDER': dict(otype=(int, np.integer), desc='Physical echelle order'),
+
+    }
+
     @classmethod
     def from_table(cls, table, copy_dict=None):
         if table.meta['PYPELINE'] == 'MultiSlit':
@@ -172,18 +180,9 @@ class SpecObj(object):
                  orderindx=None,
                  specobj_dict=None):
 
-        self._data = Table()
-
-        # For copying the object
-        if copy_dict is not None:
-            if '_SpecObj_initialised' in copy_dict:
-                copy_dict.pop('_SpecObj_initialised')
-            self.__dict__ = copy_dict
-        else:
-            # set any attributes here - before initialisation
-            # these remain as normal attributes
-            # We may wish to eliminate *all* of these
-
+        if copy_dict is None:
+            #args, _, _, values = inspect.getargvalues(inspect.currentframe())
+            #idict = {k: values[k] for k in args[1:]}
 
             #self.objid = 999
             self.name = None
@@ -209,8 +208,51 @@ class SpecObj(object):
             self.ech_frac_was_fit = None #
             self.ech_snr = None #
 
+            # Custom data model dict
+            dm_dict = {}
+            dm_dict['DET'] = det
+            if specobj_dict is not None:
+                dm_dict['PYPELINE'] = specobj_dict['pypeline']
+                dm_dict['OBJTYPE'] = specobj_dict['objtype']
+                if dm_dict['PYPELINE'] == 'MultiSlit':
+                    dm_dict['SLITID'] = specobj_dict['slitid']
+                elif dm_dict['PYPELINE'] == 'Echelle':
+                    dm_dict['ECH_ORDER'] = specobj_dict['order']
+                    dm_dict['ECH_ORDERINDX'] = specobj_dict['orderindx']
+            else:
+                dm_dict['PYPELINE'] = pypeline
+                dm_dict['OBJTYPE'] = objtype
+                # pypeline specific
+                if dm_dict['PYPELINE'] == 'MultiSlit':
+                    dm_dict['SLITID'] = slitid
+                elif dm_dict['PYPELINE'] == 'Echelle':
+                    dm_dict['ECH_ORDER'] = ech_order
+                    dm_dict['ECH_ORDERINDX'] = orderindx
+                else:
+                    msgs.error("Uh oh")
+
+            dm_dict['FLEX_SHIFT'] = 0.
+
+            super(SpecObj, self).__init__(dm_dict)
+        else:
+            super(SpecObj, self).__init__(copy_dict)
+
+        '''
+        # For copying the object
+        if copy_dict is not None:
+            if '_SpecObj_initialised' in copy_dict:
+                copy_dict.pop('_SpecObj_initialised')
+            self.__dict__ = copy_dict
+        else:
+            # set any attributes here - before initialisation
+            # these remain as normal attributes
+            # We may wish to eliminate *all* of these
+
+
+
         # after initialisation, setting attributes is the same as setting an item
-        self.__initialised = True
+        #self.__initialised = True
+        '''
 
         # TODO: JFH This is not very elegant and error prone. Perhaps we should loop over the copy dict keys
         # and populate whatever keys are actually there. For instance, if the user does not pass in a copy dict,
@@ -263,6 +305,7 @@ class SpecObj(object):
         else:
             msgs.error("Uh oh")
 
+    '''
     def __getattr__(self, item):
         """Maps values to attributes.
         Only called if there *isn't* an attribute with this name
@@ -300,6 +343,7 @@ class SpecObj(object):
             return self._data.meta[item]
         else:
             raise KeyError
+    '''
 
     # TODO: JFH Can we change this functio name to data_model, and have a separate function called
     # keys which returns sobjs._dict__.keys() which is the list of attributes of the actual object
@@ -340,7 +384,7 @@ class SpecObj(object):
         elif 'MultiSlit' in self.PYPELINE:
             # Spat
             self.name = naming_model['spat']
-            if 'SPAT_PIXPOS' not in self._data.meta.keys():
+            if self.SPAT_PIXPOS is None:
                 self.name += '----'
             else:
                 self.name += '{:04d}'.format(int(np.rint(self.SPAT_PIXPOS)))
