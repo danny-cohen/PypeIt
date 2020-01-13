@@ -773,7 +773,7 @@ class DataContainer:
         elif item in self.__dict__:  # Internal attribute
             dict.__setattr__(self, item, value)
         else:
-            raise AttributeError(e)
+            raise AttributeError()
 
     def __setitem__(self, item, value):
         """
