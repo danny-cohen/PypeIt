@@ -107,8 +107,6 @@ class MagellanFIRESpectrograph(spectrograph.Spectrograph):
         par['calibrations']['slitedges']['edge_thresh'] = 50
         par['calibrations']['slitedges']['max_shift_adj'] = 0.5
         par['calibrations']['slitedges']['left_right_pca'] = True
-        # Scienceimage default parameters
-        par['scienceimage'] = pypeitpar.ScienceImagePar()
         # Always flux calibrate, starting with default parameters
         par['fluxcalib'] = pypeitpar.FluxCalibrationPar()
         # Do not correct for flexure
@@ -170,7 +168,7 @@ class MagellanFIRESpectrograph(spectrograph.Spectrograph):
         msgs.warn('Cannot determine if frames are of type {0}.'.format(ftype))
         return np.zeros(len(fitstbl), dtype=bool)
 
-    def bpm(self, shape=None, filename=None, det=None, **null_kwargs):
+    def bpm(self, shape=None, filename=None, det=None, msbias=None, **null_kwargs):
         """
         Override parent bpm function with BPM specific to X-Shooter VIS.
 
@@ -190,11 +188,16 @@ class MagellanFIRESpectrograph(spectrograph.Spectrograph):
 
         """
         msgs.info("Custom bad pixel mask for FIRE")
-        self.empty_bpm(shape=shape, filename=filename, det=det)
-        if det == 1:
-            self.bpm_img[:, :4] = 1.
+        bpm_img = self.empty_bpm(shape=shape, filename=filename, det=det)
 
-        return self.bpm_img
+        # Fill in bad pixels if a master bias frame is provided
+        if msbias is not None:
+            return self.bpm_frombias(msbias, det, bpm_img)
+
+        if det == 1:
+            bpm_img[:, :4] = 1.
+
+        return bpm_img
 
     @staticmethod
     def slitmask(tslits_dict, pad=None, binning=None):

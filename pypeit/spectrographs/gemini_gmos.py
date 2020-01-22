@@ -126,8 +126,6 @@ class GeminiGMOSSpectrograph(spectrograph.Spectrograph):
         par['calibrations']['pixelflatframe']['process']['combine'] = 'median'
         par['calibrations']['pixelflatframe']['process']['sig_lohi'] = [10.,10.]
 
-        # Scienceimage default parameters
-        par['scienceimage'] = pypeitpar.ScienceImagePar()
         # Always flux calibrate, starting with default parameters
         par['fluxcalib'] = pypeitpar.FluxCalibrationPar()
         # Always correct for flexure, starting with default parameters
@@ -348,7 +346,7 @@ class GeminiGMOSSHamSpectrograph(GeminiGMOSSpectrograph):
         ]
         self.numhead = 13
 
-    def bpm(self, filename, det, shape=None):
+    def bpm(self, filename, det, shape=None, msbias=None):
         """ Generate a BPM
 
         Parameters
@@ -364,6 +362,10 @@ class GeminiGMOSSHamSpectrograph(GeminiGMOSSpectrograph):
         """
         # Get the empty bpm: force is always True
         bpm_img = self.empty_bpm(filename, det, shape=shape)
+
+        # Fill in bad pixels if a master bias frame is provided
+        if msbias is not None:
+            return self.bpm_frombias(msbias, det, bpm_img)
 
         if det == 1:
             msgs.info("Using hard-coded BPM for det=1 on GMOSs")
