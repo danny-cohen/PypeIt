@@ -1060,7 +1060,7 @@ class ReduxPar(ParSet):
         # parameter sets (like DetectorPar) and where they go needs to
         # be rethought.
         return ['gemini_gnirs','keck_deimos', 'keck_lris_blue', 'keck_lris_red', 'keck_lris_red_longonly',
-                'keck_nires', 'keck_hires_red', 'keck_hires_blue', 'mmt_binospec',
+                'keck_nires', 'keck_hires_red', 'keck_hires_blue', 'keck_kcwi_blue', 'mmt_binospec',
                 'keck_nirspec_low', 'keck_mosfire', 'shane_kast_blue', 'shane_kast_red', 'shane_kast_red_ret',
                 'tng_dolores', 'wht_isis_blue', 'wht_isis_red', 'vlt_xshooter_uvb', 'vlt_xshooter_vis',
                 'magellan_fire', 'magellan_mage', 'vlt_xshooter_nir', 'gemini_gmos_south_ham',
@@ -2324,7 +2324,7 @@ class CalibrationsPar(ParSet):
     """
     def __init__(self, caldir=None, setup=None, trim=None, bpm_usebias=None, biasframe=None,
                  darkframe=None, arcframe=None, tiltframe=None, pixelflatframe=None,
-                 pinholeframe=None, traceframe=None, standardframe=None, flatfield=None,
+                 pinholeframe=None, barframe=None, traceframe=None, standardframe=None, flatfield=None,
                  wavelengths=None, slitedges=None, tilts=None):
 
         # Grab the parameter names and values from the function
@@ -2374,6 +2374,10 @@ class CalibrationsPar(ParSet):
         defaults['pinholeframe'] = FrameGroupPar(frametype='pinhole', number=0)
         dtypes['pinholeframe'] = [ ParSet, dict ]
         descr['pinholeframe'] = 'The frames and combination rules for the pinholes'
+
+        defaults['barframe'] = FrameGroupPar(frametype='bar', number=0)
+        dtypes['barframe'] = [ ParSet, dict ]
+        descr['barframe'] = 'The frames and combination rules for the bar frames'
 
         defaults['arcframe'] = FrameGroupPar(frametype='arc', number=1,
                                              process=ProcessImagesPar(sigrej=-1))
@@ -2442,6 +2446,8 @@ class CalibrationsPar(ParSet):
         kwargs[pk] = FrameGroupPar.from_dict('pixelflat', cfg[pk]) if pk in k else None
         pk = 'pinholeframe'
         kwargs[pk] = FrameGroupPar.from_dict('pinhole', cfg[pk]) if pk in k else None
+        pk = 'barframe'
+        kwargs[pk] = FrameGroupPar.from_dict('bar', cfg[pk]) if pk in k else None
         pk = 'traceframe'
         kwargs[pk] = FrameGroupPar.from_dict('trace', cfg[pk]) if pk in k else None
         pk = 'standardframe'

@@ -102,16 +102,18 @@ class KeckKCWISpectrograph(spectrograph.Spectrograph):
         meta['ra'] = dict(ext=0, card='RA')
         meta['dec'] = dict(ext=0, card='DEC')
         meta['target'] = dict(ext=0, card='TARGNAME')
+        meta['dispname'] = dict(ext=0, card='BGRATNAM')
         meta['decker'] = dict(ext=0, card='IFUNAM')
         meta['binning'] = dict(card=None, compound=True)
 
         meta['mjd'] = dict(ext=0, card='MJD')
         meta['exptime'] = dict(ext=0, card='ELAPTIME')
         meta['airmass'] = dict(ext=0, card='AIRMASS')
+
         # Extras for config and frametyping
         meta['hatch'] = dict(ext=0, card='HATNUM')
-        meta['dispname'] = dict(ext=0, card='BGRATNAM')
-        meta['dispangle'] = dict(ext=0, card='BGRANGLE', rtol=1e-2)
+        meta['calpos'] = dict(ext=0, card='CALXPOS')
+        meta['dispangle'] = dict(ext=0, card='BGRANGLE', rtol=0.01)
 
         # Lamps
         lamp_names = ['LMP0', 'LMP1', 'LMP2', 'LMP3']  # FeAr, ThAr, Aux, Continuum
@@ -120,6 +122,7 @@ class KeckKCWISpectrograph(spectrograph.Spectrograph):
         for kk, lamp_name in enumerate(lamp_names):
             if lamp_name == 'LMP3':
                 # There is no shutter on LMP3
+                meta['lampshst{:02d}'.format(kk + 1)] = dict(ext=0, card=None, default=1)
                 continue
             meta['lampshst{:02d}'.format(kk + 1)] = dict(ext=0, card=lamp_name+'SHST')
         # Ingest
@@ -147,7 +150,7 @@ class KeckKCWISpectrograph(spectrograph.Spectrograph):
             used to constuct the :class:`pypeit.metadata.PypeItMetaData`
             object.
         """
-        return ['dispname', 'decker', 'binning']
+        return ['dispname', 'decker', 'binning', 'dispangle']
 
     def check_frame_type(self, ftype, fitstbl, exprng=None):
         """
@@ -155,20 +158,23 @@ class KeckKCWISpectrograph(spectrograph.Spectrograph):
         """
         good_exp = framematch.check_frame_exptime(fitstbl['exptime'], exprng)
         if ftype == 'science':
-            return good_exp & self.lamps(fitstbl, 'off') & (fitstbl['hatch'] == 1)  #hatch=1,0=open,closed
+            return good_exp & self.lamps(fitstbl, 'off') & (fitstbl['hatch'] == '1')  #hatch=1,0=open,closed
         if ftype == 'bias':
-            return good_exp & self.lamps(fitstbl, 'off') & (fitstbl['hatch'] == 0)
+            return good_exp & self.lamps(fitstbl, 'off') & (fitstbl['hatch'] == '0')
         if ftype in ['pixelflat', 'trace']:
             # Flats and trace frames are typed together
-            return good_exp & self.lamps(fitstbl, 'dome') & (fitstbl['hatch'] == 1)
+            return good_exp & self.lamps(fitstbl, 'dome_noarc') & (fitstbl['hatch'] == '0') & (fitstbl['calpos'] == '6')
         if ftype in ['dark']:
-            # dark
-            return good_exp & self.lamps(fitstbl, 'off') & (fitstbl['hatch'] == 0)
+            # Dark frames
+            return good_exp & self.lamps(fitstbl, 'off') & (fitstbl['hatch'] == '0')
+        if ftype in ['bar']:
+            # Bar frames
+            return good_exp & self.lamps(fitstbl, 'dome') & (fitstbl['hatch'] == '0') & (fitstbl['calpos'] == '4')
+        if ftype in ['arc', 'tilt']:
+            return good_exp & self.lamps(fitstbl, 'arcs') & (fitstbl['hatch'] == '0')
         if ftype in ['pinhole']:
             # Don't type pinhole frames
             return np.zeros(len(fitstbl), dtype=bool)
-        if ftype in ['arc', 'tilt']:
-            return good_exp & self.lamps(fitstbl, 'arcs') & (fitstbl['hatch'] == 0)
 
         msgs.warn('Cannot determine if frames are of type {0}.'.format(ftype))
         return np.zeros(len(fitstbl), dtype=bool)
@@ -193,25 +199,36 @@ class KeckKCWISpectrograph(spectrograph.Spectrograph):
         """
         if status == 'off':
             # Check if all are off
-            lampstat = np.array([(fitstbl[k] == 0) | (fitstbl[k] == 'None')
+            lampstat = np.array([(fitstbl[k] == '0') | (fitstbl[k] == 'None')
                                     for k in fitstbl.keys() if 'lampstat' in k])
-            lampshst = np.array([(fitstbl[k] == 0) | (fitstbl[k] == 'None')
+            lampshst = np.array([(fitstbl[k] == '0') | (fitstbl[k] == 'None')
                                     for k in fitstbl.keys() if 'lampshst' in k])
-            return np.all(lampstat|lampshst, axis=0)  # i.e. either the shutter is closed or the lamp is off
+            return np.all(lampstat, axis=0)  # Lamp has to be off
+            # return np.all(lampstat | lampshst, axis=0)  # i.e. either the shutter is closed or the lamp is off
         if status == 'arcs':
             # Check if any arc lamps are on (FeAr | ThAr)
             arc_lamp_stat = ['lampstat{0:02d}'.format(i) for i in range(1, 3)]
             arc_lamp_shst = ['lampshst{0:02d}'.format(i) for i in range(1, 3)]
-            lamp_stat = np.array([fitstbl[k] == 1 for k in fitstbl.keys()
-                                    if k in arc_lamp_stat])
-            lamp_shst = np.array([fitstbl[k] == 1 for k in fitstbl.keys()
-                                    if k in arc_lamp_shst])
-            return np.any(lamp_stat&lamp_shst, axis=0)  # i.e. lamp on and shutter open
-        if status == 'dome':
+            lamp_stat = np.array([fitstbl[k] == '1' for k in fitstbl.keys()
+                                  if k in arc_lamp_stat])
+            lamp_shst = np.array([fitstbl[k] == '1' for k in fitstbl.keys()
+                                  if k in arc_lamp_shst])
+            # Make sure the continuum frames are off
+            dome_lamps = ['lampstat{0:02d}'.format(i) for i in range(4, 5)]
+            dome_lamp_stat = np.array([fitstbl[k] == '0' for k in fitstbl.keys()
+                                       if k in dome_lamps])
+            return np.any(lamp_stat & lamp_shst & dome_lamp_stat, axis=0)  # i.e. lamp on and shutter open
+        if status in ['dome_noarc', 'dome']:
             # Check if any dome lamps are on (Continuum) - Ignore lampstat03 (Aux) - not sure what this is used for
             dome_lamp_stat = ['lampstat{0:02d}'.format(i) for i in range(4, 5)]
-            lamp_stat = np.array([fitstbl[k] == 1 for k in fitstbl.keys()
-                                    if k in dome_lamp_stat])
+            lamp_stat = np.array([fitstbl[k] == '1' for k in fitstbl.keys()
+                                  if k in dome_lamp_stat])
+            if status == 'dome_noarc':
+                # Make sure arcs are off - it seems even with the shutter closed, the arcs
+                arc_lamps = ['lampstat{0:02d}'.format(i) for i in range(1, 3)]
+                arc_lamp_stat = np.array([fitstbl[k] == '0' for k in fitstbl.keys()
+                                          if k in arc_lamps])
+                lamp_stat = lamp_stat & arc_lamp_stat
             return np.any(lamp_stat, axis=0)  # i.e. lamp on
         raise ValueError('No implementation for status = {0}'.format(status))
 
@@ -397,7 +414,7 @@ class KeckKCWIBSpectrograph(KeckKCWISpectrograph):
         # Return
         return par
 
-    def bpm(self, filename, det, shape=None):
+    def bpm(self, filename, det, shape=None, msbias=None):
         """
         Override parent bpm function with BPM specific to DEIMOS.
 
@@ -417,4 +434,9 @@ class KeckKCWIBSpectrograph(KeckKCWISpectrograph):
 
         """
         bpm_img = self.empty_bpm(filename, det, shape=shape)
+
+        # Fill in bad pixels if a master bias frame is provided
+        if msbias is not None:
+            return self.bpm_frombias(msbias, det, bpm_img)
+
         return bpm_img
